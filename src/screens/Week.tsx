@@ -151,15 +151,19 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
               <div className="match">
                 {[game.away, game.home].map((team) => {
                   const selected = mine === team.id;
-                  const won = decided && !game.is_tie && game.winner_team_id === team.id;
-                  const lost = decided && selected && !won;
+                  const winner = decided && !game.is_tie && game.winner_team_id === team.id;
+                  let result = "";
+                  if (selected && decided && game.is_tie) result = " tie";
+                  else if (selected && decided && winner) result = " right";
+                  else if (selected && decided) result = " wrong";
+                  else if (!selected && winner) result = " winner";
                   const raw = team.id === game.away.id ? game.away_score : game.home_score;
                   const score = showScore(game.status) ? raw : null;
                   return (
                     <button
                       key={team.id}
                       type="button"
-                      className={`team${selected ? " selected" : ""}${won ? " good" : ""}${lost ? " bad" : ""}`}
+                      className={`team${selected ? " selected" : ""}${result}`}
                       style={{ "--team": readableTeamColor(team.color), "--ink": luminance(readableTeamColor(team.color)) > 0.45 ? "#16120a" : "#fffaf0" } as CSSProperties}
                       aria-pressed={selected}
                       disabled={game.locked || !boot.me}
@@ -167,13 +171,16 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                       onClick={() => choose(game, team.id)}
                     >
                       <Logo src={team.logo} size={36} />
-                      <span>
+                      <span className="team-name">
                         <small>{team.location}</small>
                         <strong>{team.short_name}</strong>
-                        {selected && <em className="your-pick">Your pick</em>}
                       </span>
-                      {selected && <span className="check-mark" aria-hidden="true">✓</span>}
+                      {!selected && winner && <span className="winner-mark">W</span>}
                       {score != null && <b className="score">{score}</b>}
+                      {selected && !decided && <em className="pick-badge">Your pick ✓</em>}
+                      {selected && decided && game.is_tie && <em className="pick-badge tie">Tie</em>}
+                      {selected && decided && !game.is_tie && winner && <em className="pick-badge right">✓ Right</em>}
+                      {selected && decided && !game.is_tie && !winner && <em className="pick-badge wrong">✗ Wrong</em>}
                     </button>
                   );
                 })}
@@ -233,8 +240,8 @@ function WeekBoard({ rows, meId }: { rows: NonNullable<Boot["leaderboard"]>; meI
         </div>
         <div className="strip-you">
           {me && (
-            <strong>
-              You: {me.place}
+            <strong className="strip-you-line">
+              <span>You: {me.place}</span>
               {me.tied && <em className="tied-pill">TIED</em>}
             </strong>
           )}

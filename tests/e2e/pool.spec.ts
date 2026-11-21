@@ -26,9 +26,16 @@ async function rpc(fn: string, body: unknown) {
 
 async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${shots}/${name}.png`, fullPage: true });
-  if (name.startsWith("phone-")) {
+  if (name.startsWith("phone-") || name.startsWith("desktop-pick")) {
     await page.screenshot({ path: `${phoneShots}/${name}.png`, fullPage: true });
   }
+}
+
+async function shotCard(page: Page, slot: number, name: string) {
+  const card = page.getByTestId(`game-${slot}`);
+  await card.evaluate((node) => node.scrollIntoView({ block: "center", inline: "nearest" }));
+  await card.screenshot({ path: `${shots}/${name}.png` });
+  await card.screenshot({ path: `${phoneShots}/${name}.png` });
 }
 
 test("a player can pick, lock, review, and Brad can run the pool", async ({ page }) => {
@@ -158,6 +165,55 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await page.getByTestId("override-1").click();
   await expect(page.getByTestId("admin-message")).toHaveText("Saved");
   await shot(page, "phone-admin");
+
+  const byTeam = (id: string) => boot.games.find((game: { home: { id: string }; away: { id: string } }) => game.home.id === id || game.away.id === id);
+  const texans = byTeam("HOU");
+  const bills = byTeam("BUF");
+  const bears = byTeam("CHI");
+  if (!texans || !bills || !bears) throw new Error("Week 11 is missing a Texans, Bills, or Bears game");
+  await rpc("admin_override_game", {
+    p_admin_token: tokens.admin,
+    p_game_id: bills.id,
+    p_note: "Bills win for the wrong-pick card",
+    p_patch: { status: "final", is_tie: false, winner_team_id: "BUF" },
+  });
+  await rpc("admin_override_game", {
+    p_admin_token: tokens.admin,
+    p_game_id: bears.id,
+    p_note: "Bears tie for the tie card",
+    p_patch: { status: "final", is_tie: true },
+  });
+  await page.goto("/#/");
+  await page.reload();
+  const right = page.getByTestId(`pick-${texans.slot}-HOU`);
+  const wrong = page.getByTestId(`pick-${bills.slot}-MIA`);
+  const billsCard = page.getByTestId(`pick-${bills.slot}-BUF`);
+  const tie = page.getByTestId(`pick-${bears.slot}-CHI`);
+  await expect(right).toHaveClass(/right/);
+  await expect(right).toContainText("Right");
+  await expect(right).not.toContainText("Your pick");
+  await expect(wrong).toHaveClass(/wrong/);
+  await expect(wrong).toContainText("Wrong");
+  await expect(wrong).not.toContainText("Your pick");
+  await expect(billsCard).toHaveClass(/winner/);
+  await expect(billsCard).not.toHaveClass(/right/);
+  await expect(billsCard).toContainText("W");
+  await expect(tie).toHaveClass(/tie/);
+  await expect(tie).toContainText("Tie");
+  await shotCard(page, texans.slot, "phone-pick-right");
+  await shotCard(page, bills.slot, "phone-pick-wrong");
+  await shotCard(page, bears.slot, "phone-pick-tie");
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.reload();
+  const openBadge = page.locator(".pick-badge", { hasText: "Your pick" }).first();
+  await expect(openBadge).toBeVisible();
+  const badgeBox = await openBadge.boundingBox();
+  expect(badgeBox && badgeBox.height).toBeLessThan(28);
+  await shotCard(page, texans.slot, "desktop-pick-right");
+  await shotCard(page, bills.slot, "desktop-pick-wrong");
+  await shotCard(page, bears.slot, "desktop-pick-tie");
+  await page.setViewportSize({ width: 390, height: 844 });
 
   const fresh = await rpc("bootstrap", { p_player_token: tokens["Chelsea Jess"], p_admin_token: tokens.admin });
   for (const game of fresh.games) {
