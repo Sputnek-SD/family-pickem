@@ -258,6 +258,76 @@ describe("database rules", () => {
     await client.query("delete from private.sync_log");
   });
 
+  it("lets auto scores resume unless Brad locks in a result", async () => {
+    await client.query("begin");
+    try {
+      const board = {
+        season_year: 2026,
+        season_type: 2,
+        week: 19,
+        events: [{
+          espn_id: "qa-pregame",
+          kickoff: "2026-12-03T01:15:00Z",
+          state: "scheduled",
+          away_abbr: "HOU",
+          home_abbr: "IND",
+          away_score: 0,
+          home_score: 0,
+        }],
+      };
+      await client.query("select private.apply_scoreboard($1::jsonb)", [JSON.stringify(board)]);
+      const created = await client.query(
+        `select g.id, g.status, g.away_score, g.home_score, g.result_source
+         from private.games g
+         join private.weeks w on w.id = g.week_id
+         join private.seasons s on s.id = w.season_id
+         where s.year = 2026 and w.week_number = 19 and g.espn_id = 'qa-pregame'`,
+      );
+      expect(created.rows[0].status).toBe("scheduled");
+      expect(created.rows[0].away_score).toBeNull();
+      expect(created.rows[0].home_score).toBeNull();
+      const gameId = created.rows[0].id;
+
+      await client.query(
+        `select private.admin_override_game($1, $2, '{"status":"scheduled","is_tie":false,"winner_team_id":""}'::jsonb, 'leave it scheduled')`,
+        [adminToken, gameId],
+      );
+      const scheduled = await client.query("select result_source from private.games where id = $1", [gameId]);
+      expect(scheduled.rows[0].result_source).not.toBe("admin");
+
+      await client.query("select private.apply_scoreboard($1::jsonb)", [JSON.stringify({
+        ...board,
+        events: [{ ...board.events[0], state: "in_progress", away_score: 7, home_score: 0 }],
+      })]);
+      const live = await client.query("select status, away_score, home_score from private.games where id = $1", [gameId]);
+      expect(live.rows[0]).toMatchObject({ status: "in_progress", away_score: 7, home_score: 0 });
+
+      await client.query(
+        `select private.admin_override_game($1, $2, '{"status":"final","is_tie":false,"winner_team_id":"HOU"}'::jsonb, 'call Houston')`,
+        [adminToken, gameId],
+      );
+      await client.query("select private.apply_scoreboard($1::jsonb)", [JSON.stringify({
+        ...board,
+        events: [{ ...board.events[0], state: "final", away_score: 10, home_score: 24 }],
+      })]);
+      const held = await client.query("select winner_team_id, result_source from private.games where id = $1", [gameId]);
+      expect(held.rows[0]).toMatchObject({ winner_team_id: "HOU", result_source: "admin" });
+
+      await client.query(
+        `select private.admin_override_game($1, $2, '{"release_auto":true}'::jsonb, 'hand back to ESPN')`,
+        [adminToken, gameId],
+      );
+      await client.query("select private.apply_scoreboard($1::jsonb)", [JSON.stringify({
+        ...board,
+        events: [{ ...board.events[0], state: "final", away_score: 10, home_score: 24 }],
+      })]);
+      const released = await client.query("select winner_team_id, result_source, home_score from private.games where id = $1", [gameId]);
+      expect(released.rows[0]).toMatchObject({ winner_team_id: "IND", result_source: "espn", home_score: 24 });
+    } finally {
+      await client.query("rollback");
+    }
+  });
+
   it("loads 2026 from the generated SQL and the sheet check is empty", async () => {
     const { execFileSync } = await import("node:child_process");
     const sql = execFileSync(path.resolve("node_modules/.bin/tsx"), ["scripts/import-sql.ts"], {

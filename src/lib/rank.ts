@@ -15,18 +15,26 @@ export function ordinal(n: number): string {
 
 export type Ranked<T> = T & { rank: number; tied: boolean; place: string };
 
-/** Competition ranking by season total. Ties share a place and are flagged. Never "T1". */
-export function rankByTotal<T extends { total: number; full_name: string }>(rows: T[]): Ranked<T>[] {
+/** Competition ranking. Ties share a place and get a TIED tag. Never "T1". */
+export function rankBy<T>(
+  rows: T[],
+  scoreOf: (row: T) => number,
+  nameOf: (row: T) => string,
+): Ranked<T>[] {
   const sorted = [...rows].sort(
-    (a, b) => b.total - a.total || a.full_name.localeCompare(b.full_name),
+    (a, b) => scoreOf(b) - scoreOf(a) || nameOf(a).localeCompare(nameOf(b)),
   );
   return sorted.map((row, index) => {
     let rank = index + 1;
     for (let i = index - 1; i >= 0; i--) {
-      if (sorted[i].total === row.total) rank = i + 1;
+      if (scoreOf(sorted[i]) === scoreOf(row)) rank = i + 1;
       else break;
     }
-    const tied = sorted.filter((other) => other.total === row.total).length > 1;
+    const tied = sorted.filter((other) => scoreOf(other) === scoreOf(row)).length > 1;
     return { ...row, rank, tied, place: ordinal(rank) };
   });
+}
+
+export function rankByTotal<T extends { total: number; full_name: string }>(rows: T[]): Ranked<T>[] {
+  return rankBy(rows, (row) => row.total, (row) => row.full_name);
 }

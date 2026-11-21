@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { savePicks } from "../lib/api";
 import { displayName } from "../lib/names";
+import { rankBy } from "../lib/rank";
+import { showScore } from "../lib/scores";
 import { readableTeamColor } from "../lib/theme";
 import { formatCountdown, formatKickoff } from "../lib/time";
 import type { Boot, Game } from "../lib/types";
@@ -67,7 +69,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
 
   return (
     <div className="screen">
-      <header className="hero">
+      <header className="hero week">
         <p className="kicker" data-testid="theme-kicker">
           {boot.season?.year} · {boot.season?.lock_mode === "kickoff" ? "Locks at kickoff" : "Thursday lock"}
         </p>
@@ -113,29 +115,14 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
         </div>
       )}
 
-      {boot.leaderboard && boot.leaderboard.length > 0 && (
-        <ol className="liveboard" data-testid="live-board">
-          {boot.leaderboard
-            .slice()
-            .sort((a, b) => b.correct - a.correct || a.full_name.localeCompare(b.full_name))
-            .map((row) => (
-              <li key={row.player_id}>
-                <span>
-                  {row.winner && <Crown size={14} />}
-                  {displayName(row, boot.leaderboard ?? [])}
-                </span>
-                <b>{row.correct}</b>
-              </li>
-            ))}
-        </ol>
-      )}
-
       {!boot.me && (
         <section className="panel">
           <h2>Open your player link to make picks</h2>
           <p>The admin link can run the pool. Picks use your own private link, and this phone will remember it.</p>
         </section>
       )}
+
+      {boot.leaderboard && boot.leaderboard.length > 0 && poolLocked && <WeekBoard rows={boot.leaderboard} />}
 
       <div className="games">
         {games.map((game) => {
@@ -164,7 +151,8 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                   const selected = mine === team.id;
                   const won = decided && !game.is_tie && game.winner_team_id === team.id;
                   const lost = decided && selected && !won;
-                  const score = team.id === game.away.id ? game.away_score : game.home_score;
+                  const raw = team.id === game.away.id ? game.away_score : game.home_score;
+                  const score = showScore(game.status) ? raw : null;
                   return (
                     <button
                       key={team.id}
@@ -218,5 +206,23 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
         />
       </section>
     </div>
+  );
+}
+
+function WeekBoard({ rows }: { rows: NonNullable<Boot["leaderboard"]> }) {
+  const ranked = rankBy(rows, (row) => row.correct, (row) => row.full_name);
+  return (
+    <ol className="liveboard" data-testid="live-board">
+      {ranked.map((row) => (
+        <li key={row.player_id}>
+          <span className="place">{row.place}{row.tied && <em>TIED</em>}</span>
+          <span>
+            {row.winner && <Crown size={14} />}
+            {displayName(row, ranked)}
+          </span>
+          <b>{row.correct}</b>
+        </li>
+      ))}
+    </ol>
   );
 }

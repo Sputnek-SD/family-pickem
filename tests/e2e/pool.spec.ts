@@ -60,6 +60,10 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await db.end();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/");
+  await expect(page.getByTestId("welcome")).toBeVisible();
+  await expect(page.getByTestId("nav-week")).toHaveCount(0);
+  await shot(page, "phone-welcome");
   await rpc("admin_set_clock", { p_admin_token: tokens.admin, p_at: "2026-11-18T18:00:00Z" });
 
   await page.goto(`/#/p/${tokens["Chelsea Jess"]}`);

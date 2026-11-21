@@ -285,6 +285,16 @@ function GameEditor({ game, onSave }: { game: Game; onSave: (patch: Record<strin
           onChange={(event) => setTotal(event.target.value.replace(/[^\d]/g, "").slice(0, 3))}
         />
       )}
+      {(game.result_source === "admin" || game.result_source === "sheet") && (
+        <button
+          type="button"
+          className="secondary"
+          data-testid={`release-${game.slot}`}
+          onClick={() => onSave({ release_auto: true })}
+        >
+          Hand back to auto scores
+        </button>
+      )}
       <button
         type="button"
         className="secondary"

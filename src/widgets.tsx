@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { displayName, type Named } from "./lib/names";
+import { rankBy } from "./lib/rank";
 import { readableTeamColor } from "./lib/theme";
 import type { Board, Game, Person } from "./lib/types";
 
@@ -51,15 +52,25 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
     );
   }
   const games = board.games.filter((game) => game.status !== "excluded");
-  const cols = `132px repeat(${games.length + 1}, 76px)`;
+  const ranked = rankBy(
+    board.rows.filter((row) => row.correct != null),
+    (row) => row.correct ?? 0,
+    (row) => row.full_name,
+  );
+  const placeOf = new Map(ranked.map((row) => [row.player_id, row]));
+  const ordered = [
+    ...ranked,
+    ...board.rows.filter((row) => row.correct == null),
+  ];
+  const cols = `148px repeat(${games.length + 1}, 72px)`;
   return (
     <div className="gridwrap" data-testid="pick-grid">
       <div className="gridrow head" style={{ gridTemplateColumns: cols }}>
         <div className="sticky">Player</div>
         {games.map((game) => (
           <div key={game.id} className="gh" title={`${game.away.name} at ${game.home.name}`}>
-            <b>{game.away.id}</b>
-            <span>{game.home.id}</span>
+            {game.status === "final" && game.is_tie ? <b>TIE</b> : <b>{game.away.id}</b>}
+            <span>@ {game.home.id}</span>
           </div>
         ))}
         <div className="gh">
@@ -67,32 +78,42 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
           <span>{board.week.mnf_total ?? "—"}</span>
         </div>
       </div>
-      {board.rows.map((row) => (
-        <div
-          className={row.player_id === meId ? "gridrow me" : "gridrow"}
-          style={{ gridTemplateColumns: cols }}
-          key={row.player_id}
-        >
-          <div className="sticky">
-            {displayName(row, board.rows)}
-            {row.winner && <Crown size={14} />}
+      {ordered.map((row) => {
+        const place = placeOf.get(row.player_id);
+        return (
+          <div
+            className={row.player_id === meId ? "gridrow me" : "gridrow"}
+            style={{ gridTemplateColumns: cols }}
+            key={row.player_id}
+          >
+            <div className="sticky">
+              <span className="who-rank">
+                {place ? place.place : ""}
+                {place?.tied && <em>TIED</em>}
+                {row.winner && <Crown size={14} />}
+              </span>
+              <span>
+                {displayName(row, board.rows)}
+                {row.correct != null && <b>{row.correct}</b>}
+              </span>
+            </div>
+            {games.map((game) => {
+              const pick = row.picks[game.id];
+              const team = pick === game.away.id ? game.away : pick === game.home.id ? game.home : null;
+              let mark = "";
+              if (game.status === "final" && game.is_tie) mark = "tie";
+              else if (game.status === "final" && pick && pick === game.winner_team_id) mark = "good";
+              else if (game.status === "final" && pick) mark = "bad";
+              return (
+                <div key={game.id} className={`cell ${mark}`}>
+                  {game.status === "final" && game.is_tie ? "TIE" : team ? team.id : "–"}
+                </div>
+              );
+            })}
+            <div className="cell">{row.guess ?? "–"}</div>
           </div>
-          {games.map((game) => {
-            const pick = row.picks[game.id];
-            const team = pick === game.away.id ? game.away : pick === game.home.id ? game.home : null;
-            let mark = "";
-            if (game.status === "final" && game.is_tie) mark = "tie";
-            else if (game.status === "final" && pick && pick === game.winner_team_id) mark = "good";
-            else if (game.status === "final" && pick) mark = "bad";
-            return (
-              <div key={game.id} className={`cell ${mark}`}>
-                {team ? team.id : "–"}
-              </div>
-            );
-          })}
-          <div className="cell">{row.guess ?? "–"}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
