@@ -6,7 +6,7 @@ import { showScore } from "../lib/scores";
 import { luminance, readableTeamColor } from "../lib/theme";
 import { formatCountdown, formatKickoff } from "../lib/time";
 import type { Boot, Game } from "../lib/types";
-import { Confetti, Crown, Missing } from "../widgets";
+import { Confetti, Crown, Logo, Missing } from "../widgets";
 
 export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
   const week = boot.weeks.find((item) => item.id === boot.current_week_id) ?? null;
@@ -166,7 +166,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                       data-testid={`pick-${game.slot}-${team.id}`}
                       onClick={() => choose(game, team.id)}
                     >
-                      <img src={team.logo} alt="" width={44} height={44} />
+                      <Logo src={team.logo} size={36} />
                       <span>
                         <small>{team.location}</small>
                         <strong>{team.short_name}</strong>
@@ -223,8 +223,11 @@ function WeekBoard({ rows, meId }: { rows: NonNullable<Boot["leaderboard"]>; meI
       <div className="strip" data-testid="live-board">
         <div className="strip-top">
           {top.map((row) => (
-            <span key={row.player_id}>
-              {row.place} {displayName(row, ranked)} {row.correct}
+            <span className="strip-person" key={row.player_id}>
+              <b>{row.place}</b>
+              {row.tied && <em className="tied-pill">TIED</em>}
+              {displayName(row, ranked)}
+              <strong>{row.correct}</strong>
             </span>
           ))}
         </div>
@@ -232,7 +235,7 @@ function WeekBoard({ rows, meId }: { rows: NonNullable<Boot["leaderboard"]>; meI
           {me && (
             <strong>
               You: {me.place}
-              {me.tied ? " TIED" : ""}
+              {me.tied && <em className="tied-pill">TIED</em>}
             </strong>
           )}
           <button type="button" onClick={() => setOpen(true)}>
@@ -249,7 +252,7 @@ function WeekBoard({ rows, meId }: { rows: NonNullable<Boot["leaderboard"]>; meI
           <li key={row.player_id} className={row.player_id === meId ? "me" : undefined}>
             <span>
               {row.place}
-              {row.tied && <em>TIED</em>}
+              {row.tied && <em className="tied-pill">TIED</em>}
               {row.winner && <Crown size={14} />}
               {displayName(row, ranked)}
             </span>

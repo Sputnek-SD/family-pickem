@@ -8,6 +8,7 @@ const anon =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 const api = process.env.API_URL ?? "http://127.0.0.1:54321";
 const shots = "/opt/cursor/artifacts";
+const phoneShots = "docs/screenshots";
 
 const tokens = JSON.parse(readFileSync(".tokens.local.json", "utf8")) as Record<string, string>;
 
@@ -25,10 +26,14 @@ async function rpc(fn: string, body: unknown) {
 
 async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${shots}/${name}.png`, fullPage: true });
+  if (name.startsWith("phone-")) {
+    await page.screenshot({ path: `${phoneShots}/${name}.png`, fullPage: true });
+  }
 }
 
 test("a player can pick, lock, review, and Brad can run the pool", async ({ page }) => {
   await mkdir(shots, { recursive: true });
+  await mkdir(phoneShots, { recursive: true });
   execSync("npx tsx scripts/import-history.ts", {
     env: {
       ...process.env,
@@ -133,9 +138,10 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await expect(giants.locator(".tied-pill")).toHaveText("TIE");
   await expect(page.locator(".cell.tie").first()).not.toHaveText("TIE");
   await giants.evaluate((node) => {
+    if (!(node instanceof HTMLElement)) return;
     const scroller = node.closest(".gridwrap");
     if (!(scroller instanceof HTMLElement)) return;
-    scroller.scrollLeft = Math.max(0, node.offsetLeft - 188);
+    scroller.scrollLeft = Math.max(0, node.offsetLeft - 96);
   });
   await shot(page, "phone-history-week5");
 

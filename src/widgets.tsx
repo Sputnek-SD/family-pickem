@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { displayName, type Named } from "./lib/names";
 import { rankBy } from "./lib/rank";
 import { readableTeamColor } from "./lib/theme";
@@ -13,14 +13,31 @@ export function Crown({ size = 18 }: { size?: number }) {
 }
 
 export function Confetti({ show }: { show: boolean }) {
-  if (!show || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
-  const pieces = Array.from({ length: 28 }, (_, i) => i);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (!show || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setOn(false);
+      return;
+    }
+    setOn(true);
+    const timer = window.setTimeout(() => setOn(false), 900);
+    return () => window.clearTimeout(timer);
+  }, [show]);
+  if (!on) return null;
   return (
     <div className="confetti" aria-hidden="true">
-      {pieces.map((piece) => (
+      {Array.from({ length: 7 }, (_, piece) => (
         <i key={piece} style={{ "--i": piece } as CSSProperties} />
       ))}
     </div>
+  );
+}
+
+export function Logo({ src, size = 28 }: { src: string; size?: number }) {
+  return (
+    <span className="logo-badge">
+      <img src={src} alt="" width={size} height={size} />
+    </span>
   );
 }
 
@@ -28,7 +45,7 @@ export function TeamFace({ team, selected }: { team: Game["away"]; selected?: bo
   const color = readableTeamColor(team.color);
   return (
     <span className={selected ? "face on" : "face"} style={{ "--team": color } as CSSProperties}>
-      <img src={team.logo} alt="" width={36} height={36} />
+      <Logo src={team.logo} size={32} />
     </span>
   );
 }
@@ -62,22 +79,22 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
     ...ranked,
     ...board.rows.filter((row) => row.correct == null),
   ];
+  const columns = { "--games": games.length } as CSSProperties;
   return (
     <div className="grid-scroll">
       <p className="scroll-hint">Scroll sideways for every game and the Monday guess.</p>
       <div className="gridwrap" data-testid="pick-grid">
-        <div className="gridrow head">
+        <div className="gridrow head" style={columns}>
           <div className="sticky">Player</div>
-          <div className="sticky-score">Pts</div>
           {games.map((game) => (
             <div key={game.id} className="gh" title={`${game.away.name} at ${game.home.name}`}>
-              <img src={game.away.logo} alt="" width={18} height={18} />
+              <Logo src={game.away.logo} size={22} />
               <b>{game.away.id}</b>
               <span>@ {game.home.id}</span>
               {game.status === "final" && game.is_tie && <em className="tied-pill">TIE</em>}
             </div>
           ))}
-          <div className="gh">
+          <div className="gh mnf">
             <b>MNF</b>
             <span>{board.week.mnf_total ?? "—"}</span>
           </div>
@@ -85,27 +102,27 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
         {ordered.map((row) => {
           const place = placeOf.get(row.player_id);
           return (
-            <div className={row.player_id === meId ? "gridrow me" : "gridrow"} key={row.player_id}>
+            <div className={row.player_id === meId ? "gridrow me" : "gridrow"} style={columns} key={row.player_id}>
               <div className="sticky">
                 <span className="who-rank">
                   {place ? place.place : ""}
-                  {row.winner && <Crown size={14} />}
+                  {place?.tied && <em className="tied-pill">TIED</em>}
+                  {row.winner && <Crown size={12} />}
                 </span>
                 <span className="who-name">{displayName(row, board.rows)}</span>
-                {place?.tied && <em className="tied-pill">TIED</em>}
+                <b className="who-pts">{row.correct ?? "–"}</b>
               </div>
-              <div className="sticky-score">{row.correct ?? "–"}</div>
               {games.map((game) => {
                 const pick = row.picks[game.id];
                 const team = pick === game.away.id ? game.away : pick === game.home.id ? game.home : null;
-                let mark = "";
+                let mark = "pending";
                 if (game.status === "final" && game.is_tie) mark = "tie";
                 else if (game.status === "final" && pick && pick === game.winner_team_id) mark = "good";
                 else if (game.status === "final" && pick) mark = "bad";
                 const color = team ? readableTeamColor(team.color) : "transparent";
                 return (
                   <div key={game.id} className={`cell ${mark}`} style={{ "--pick": color } as CSSProperties}>
-                    {team ? <img src={team.logo} alt="" width={22} height={22} /> : null}
+                    {team ? <Logo src={team.logo} size={16} /> : null}
                     <span>{team ? team.id : "–"}</span>
                   </div>
                 );
