@@ -1,11 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
+import { safeAuthStorage, safeGetItem, safeRemoveItem, safeSetItem } from "./storage";
 import type { Board, Boot, PlayerPage } from "./types";
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(url, key, {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storage: safeAuthStorage,
+  },
 });
 
 async function call<T>(fn: string, args: Record<string, unknown>): Promise<T> {
@@ -18,23 +24,18 @@ export const PLAYER_KEY = "pickem.playerToken";
 export const ADMIN_KEY = "pickem.adminToken";
 
 export function readTokens(): { player: string; admin: string } {
-  try {
-    return {
-      player: localStorage.getItem(PLAYER_KEY) ?? "",
-      admin: localStorage.getItem(ADMIN_KEY) ?? "",
-    };
-  } catch {
-    return { player: "", admin: "" };
-  }
+  return {
+    player: safeGetItem(PLAYER_KEY) ?? "",
+    admin: safeGetItem(ADMIN_KEY) ?? "",
+  };
 }
 
 export function writeToken(kind: "player" | "admin", token: string) {
-  const key = kind === "player" ? PLAYER_KEY : ADMIN_KEY;
-  localStorage.setItem(key, token);
+  safeSetItem(kind === "player" ? PLAYER_KEY : ADMIN_KEY, token);
 }
 
 export function clearToken(kind: "player" | "admin") {
-  localStorage.removeItem(kind === "player" ? PLAYER_KEY : ADMIN_KEY);
+  safeRemoveItem(kind === "player" ? PLAYER_KEY : ADMIN_KEY);
 }
 
 export function bootstrap(player: string, admin: string) {

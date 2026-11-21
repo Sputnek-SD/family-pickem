@@ -54,6 +54,7 @@ export function App() {
   const [boot, setBoot] = useState<Boot | null>(null);
   const [error, setError] = useState("");
   const requestId = useRef(0);
+  const inflightKey = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     const link = linkFromHash(location.hash);
@@ -61,6 +62,9 @@ export function App() {
     // The link is not stored yet. A tokenless bootstrap here would race the real one.
     if (link.player && next.player !== link.player) return;
     if (link.admin && next.admin !== link.admin) return;
+    const key = `${next.player}\n${next.admin}`;
+    if (inflightKey.current === key) return;
+    inflightKey.current = key;
     const mine = ++requestId.current;
     try {
       const data = await bootstrap(next.player, next.admin);
@@ -74,6 +78,8 @@ export function App() {
     } catch (reason) {
       if (mine !== requestId.current) return;
       setError(reason instanceof Error ? reason.message : "Could not reach the pool");
+    } finally {
+      if (inflightKey.current === key) inflightKey.current = null;
     }
   }, []);
 

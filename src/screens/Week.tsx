@@ -170,13 +170,15 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                       data-testid={`pick-${game.slot}-${team.id}`}
                       onClick={() => choose(game, team.id)}
                     >
-                      <Logo src={team.logo} size={36} />
-                      <span className="team-name">
-                        <small>{team.location}</small>
-                        <strong>{team.short_name}</strong>
+                      <span className="team-row">
+                        <Logo src={team.logo} size={36} />
+                        <span className="team-name">
+                          <small>{team.location}</small>
+                          <strong>{team.short_name}</strong>
+                        </span>
+                        {!selected && winner && <span className="winner-mark">W</span>}
+                        {score != null && <b className="score">{score}</b>}
                       </span>
-                      {!selected && winner && <span className="winner-mark">W</span>}
-                      {score != null && <b className="score">{score}</b>}
                       {selected && !decided && <em className="pick-badge">Your pick ✓</em>}
                       {selected && decided && game.is_tie && <em className="pick-badge tie">Tie</em>}
                       {selected && decided && !game.is_tie && winner && <em className="pick-badge right">✓ Right</em>}

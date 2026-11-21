@@ -98,9 +98,9 @@ main {
   --team: var(--accent);
   --ink: var(--text);
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   width: 100%;
   min-height: 76px;
   text-align: left;
@@ -112,12 +112,19 @@ main {
   opacity: 0.5;
   filter: saturate(0.25) brightness(0.9);
 }
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
 .team-name { flex: 1 1 auto; min-width: 0; }
 .team small { display: block; color: var(--faint); font-size: 12px; }
 .team strong { font-size: 22px; color: var(--text); }
-.team .score { margin-left: auto; font-family: var(--display); font-size: 36px; }
+.team .score { margin-left: auto; flex: none; font-family: var(--display); font-size: 36px; }
 .pick-badge {
-  flex: 1 0 100%;
+  align-self: flex-start;
   width: max-content;
   max-width: 100%;
   margin: 0;
@@ -134,9 +141,10 @@ main {
   white-space: nowrap;
 }
 .pick-badge.right { background: #146c3a; color: #f4fff8; }
-.pick-badge.wrong { background: #9d1c28; color: #fff6f6; }
+.pick-badge.wrong { background: #fffaf0; color: #9f1239; }
 .pick-badge.tie { background: #d5d5d5; color: #1a1a1a; }
 .winner-mark {
+  flex: none;
   margin-left: 4px;
   padding: 1px 6px;
   border-radius: 999px;
@@ -169,13 +177,18 @@ main {
 }
 .team.selected.right .pick-badge { color: #f4fff8; }
 .team.selected.wrong {
-  opacity: 0.78;
-  filter: saturate(0.72);
+  opacity: 1;
+  filter: none;
   box-shadow:
-    0 0 0 4px #ff4d5a,
-    0 0 20px 3px rgba(255, 77, 90, 0.8);
+    0 0 0 4px #ff5a67,
+    0 0 20px 3px rgba(255, 90, 103, 0.85);
 }
-.team.selected.wrong .pick-badge { color: #fff6f6; }
+.team.selected.wrong .team-row { opacity: 0.85; }
+.team.selected.wrong .pick-badge {
+  opacity: 1;
+  background: #fffaf0;
+  color: #9f1239;
+}
 .team.selected.tie {
   box-shadow:
     0 0 0 4px #c8c8c8,
@@ -280,15 +293,9 @@ main {
 .standings button.me, .gridrow.me .sticky {
   background: color-mix(in srgb, var(--accent) 22%, var(--bg-elev));
 }
-.gridrow.me .sticky { padding-left: 14px; }
-.gridrow.me .sticky::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--accent);
+.gridrow.me .sticky {
+  border-left: 4px solid var(--accent);
+  padding-left: 10px;
 }
 .standings button { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; }
 .place { font-family: var(--display); font-size: 28px; }
@@ -493,17 +500,18 @@ main {
   .scroll-hint { display: none; }
   .gridwrap { overflow-x: auto; }
   .gridrow {
-    --name: 156px;
+    --name: 176px;
     width: 100%;
     min-width: 100%;
-    grid-template-columns: var(--name) repeat(var(--games), minmax(0, 1fr)) minmax(0, 1fr);
+    grid-template-columns: var(--name) repeat(var(--games), minmax(0, 1fr)) max-content;
   }
   .gridrow > div { padding: 4px 3px; }
   .sticky { padding-left: 10px; }
-  .gridrow.me .sticky { padding-left: 16px; }
-  .who-rank { font-size: 18px; }
-  .who-name { font-size: 17px; }
-  .who-pts { font-size: 26px; }
+  .gridrow.me .sticky { padding-left: 12px; }
+  .who-rank { font-size: 16px; }
+  .who-name { font-size: 18px; }
+  .who-pts { font-size: 28px; }
+  .gh.mnf, .cell.guess { padding-left: 10px; padding-right: 10px; }
   .gh { overflow: visible; }
   .gh b, .gh span { font-size: 13px; }
   .gh .logo-badge { width: 34px; height: 34px; }

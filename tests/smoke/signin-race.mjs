@@ -89,6 +89,7 @@ function bootFrom(body) {
 }
 
 async function installBootstrap(page, problems) {
+  const counts = { tokened: 0, plain: 0 };
   page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
   page.on("console", (message) => {
     if (message.type() === "error") problems.push(`console: ${message.text()}`);
@@ -96,13 +97,19 @@ async function installBootstrap(page, problems) {
   await page.route("**/rest/v1/rpc/bootstrap", async (route) => {
     const body = route.request().postDataJSON();
     const payload = bootFrom(body);
-    if (!body?.p_player_token) await new Promise((resolve) => setTimeout(resolve, slowMs));
+    if (!body?.p_player_token) {
+      counts.plain += 1;
+      await new Promise((resolve) => setTimeout(resolve, slowMs));
+    } else {
+      counts.tokened += 1;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
   });
+  return counts;
 }
 
 const failures = [];
@@ -115,10 +122,11 @@ try {
     const problems = [];
     const context = await browser.newContext();
     const page = await context.newPage();
-    await installBootstrap(page, problems);
+    const counts = await installBootstrap(page, problems);
     await page.goto(`${origin}/#/p/chelsea`, { waitUntil: "domcontentloaded" });
     await page.getByTestId("week-title").waitFor({ timeout: 8000 });
     await page.waitForTimeout(slowMs + 400);
+    if (counts.tokened !== 1) problems.push(`expected one tokened bootstrap, saw ${counts.tokened}`);
     if (await page.getByTestId("welcome").count()) {
       problems.push("a late tokenless response replaced the signed-in week");
     }
@@ -140,6 +148,30 @@ try {
       problems.push("the bad-link message did not survive the late tokenless response");
     }
     if (problems.length) failures.push(`bad link\n${problems.join("\n")}`);
+    await context.close();
+  }
+
+  {
+    const problems = [];
+    const context = await browser.newContext();
+    await context.addInitScript(() => {
+      const deny = function denyStorage() {
+        throw new DOMException("The operation is insecure.", "SecurityError");
+      };
+      Storage.prototype.getItem = deny;
+      Storage.prototype.setItem = deny;
+      Storage.prototype.removeItem = deny;
+      Storage.prototype.clear = deny;
+      Storage.prototype.key = deny;
+    });
+    const page = await context.newPage();
+    await installBootstrap(page, problems);
+    await page.goto(`${origin}/#/p/chelsea`, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("week-title").waitFor({ timeout: 8000 });
+    if (await page.getByTestId("app-error").count()) {
+      problems.push("blocked storage showed the error screen");
+    }
+    if (problems.length) failures.push(`blocked storage\n${problems.join("\n")}`);
     await context.close();
   }
 } catch (error) {
