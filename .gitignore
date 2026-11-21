@@ -1,0 +1,10 @@
+node_modules
+dist
+.tokens.local.json
+.env.local
+.env.development.local
+playwright-report
+test-results
+blob-report
+.DS_Store
+*.log

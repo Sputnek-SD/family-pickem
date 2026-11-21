@@ -1,0 +1,23 @@
+Family NFL Pick'em 2026 — read-only export for Forge test app
+Exported Friday Nov 20, 2026, after Week 11 Thursday night (Texans 26, Colts 3).
+Source: live Google Sheet "Family NFL Pick’em 2026"
+Spreadsheet id: 1zFfWKSAMDO14j6KsHkZtAw9oTlDwO2cVtuie8VLtn1w
+URL: https://docs.google.com/spreadsheets/d/1zFfWKSAMDO14j6KsHkZtAw9oTlDwO2cVtuie8VLtn1w/edit
+
+THIS IS A SNAPSHOT. Do not write to this Sheet, any weekly Google Form, or Scoreboard routines.
+Build the test app as a fully separate copy.
+
+Files:
+- standings.csv — current Standings tab (Week 11 column includes the 1 TNF game only)
+- schedule.csv — Schedule tab weeks 1-11 (Winner and Monday Night Total are the only manual result inputs)
+- week_01_picks.csv through week_11_picks.csv — each Week N tab (picks, MNF guess, Correct Picks, Tiebreak Diff)
+- weekly_champions.csv — weekly winners inferred from those tabs, matching the Standings Weekly Wins column
+- weekly_wins_formula_brad.txt — live Standings Weekly Wins formula (row 2), source of truth for how a week is won
+
+Tabs in the live Sheet (do not edit):
+- Week 1 … Week 11 (scoring tabs)
+- Standings
+- Schedule
+- Week N Responses (and a few older "Form Responses" tabs). Do not use response tabs in the test app: they can contain email addresses. The Week N tabs already have the latest on-time picks.
+
+No prize, pot, or payout information is in the Sheet, and Brad has not told Scoreboard those details.

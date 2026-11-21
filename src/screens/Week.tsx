@@ -1,0 +1,222 @@
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { savePicks } from "../lib/api";
+import { displayName } from "../lib/names";
+import { readableTeamColor } from "../lib/theme";
+import { formatCountdown, formatKickoff } from "../lib/time";
+import type { Boot, Game } from "../lib/types";
+import { Confetti, Crown, Missing } from "../widgets";
+
+export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
+  const week = boot.weeks.find((item) => item.id === boot.current_week_id) ?? null;
+  const [picks, setPicks] = useState(boot.my_picks);
+  const [guess, setGuess] = useState(boot.my_guess == null ? "" : String(boot.my_guess));
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const [now, setNow] = useState(() => new Date(boot.now).getTime());
+  const picksRef = useRef(picks);
+  const guessRef = useRef<number | null>(boot.my_guess);
+  const queue = useRef(Promise.resolve());
+  picksRef.current = picks;
+
+  useEffect(() => {
+    setPicks(boot.my_picks);
+    picksRef.current = boot.my_picks;
+    setGuess(boot.my_guess == null ? "" : String(boot.my_guess));
+    guessRef.current = boot.my_guess;
+  }, [boot.current_week_id]);
+
+  useEffect(() => {
+    const skew = new Date(boot.now).getTime() - Date.now();
+    const timer = window.setInterval(() => setNow(Date.now() + skew), 1000);
+    return () => window.clearInterval(timer);
+  }, [boot.now]);
+
+  const games = boot.games.filter((game) => game.status !== "excluded");
+  const picked = games.filter((game) => picks[game.id]).length;
+  const guessNumber = guess.trim() === "" ? null : Number(guess);
+  const guessOk = guessNumber == null || (Number.isInteger(guessNumber) && guessNumber >= 0 && guessNumber <= 150);
+  const poolLocked = week?.lock_at ? now >= new Date(week.lock_at).getTime() : false;
+  const remain = week?.lock_at ? new Date(week.lock_at).getTime() - now : 0;
+  const winners = (boot.leaderboard ?? []).filter((row) => row.winner);
+  const meMissing = !!boot.me && (picked < games.length || guessNumber == null);
+
+  function enqueue(nextPicks: Record<string, string>, nextGuess: number | null) {
+    if (!token || !week) return;
+    setState("saving");
+    queue.current = queue.current
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          await savePicks(token, week.id, nextPicks, nextGuess);
+          setState("saved");
+          setMessage("Saved");
+        } catch (error) {
+          setState("error");
+          setMessage(error instanceof Error ? error.message : "Could not save");
+        }
+      });
+  }
+
+  function choose(game: Game, teamId: string) {
+    if (game.locked || !boot.me) return;
+    const next = { ...picksRef.current, [game.id]: teamId };
+    picksRef.current = next;
+    setPicks(next);
+    enqueue(next, guessRef.current);
+  }
+
+  return (
+    <div className="screen">
+      <header className="hero">
+        <p className="kicker" data-testid="theme-kicker">
+          {boot.season?.year} · {boot.season?.lock_mode === "kickoff" ? "Locks at kickoff" : "Thursday lock"}
+        </p>
+        <h1 data-testid="week-title">{week?.label ?? "This week"}</h1>
+        {week?.lock_at && boot.season?.lock_mode !== "kickoff" && (
+          <p className="countdown" data-testid="countdown">
+            {poolLocked ? "Locked" : `Locks in ${formatCountdown(remain)}`}
+            <span>{formatKickoff(week.lock_at)}</span>
+          </p>
+        )}
+        {boot.season?.lock_mode === "kickoff" && (
+          <p className="countdown" data-testid="countdown">
+            Each game locks at kickoff
+          </p>
+        )}
+        <div className="progress" data-testid="progress">
+          <span>
+            {picked} of {games.length} picked
+          </span>
+          <div className="bar">
+            <i style={{ width: games.length ? `${(picked / games.length) * 100}%` : "0%" }} />
+          </div>
+        </div>
+        {meMissing && !poolLocked && (
+          <p className="nudge" data-testid="you-need">
+            You haven’t finished this week yet.
+          </p>
+        )}
+        <Missing people={boot.missing} />
+        <p className={`save ${state}`} data-testid="saved-state">
+          {message}
+        </p>
+      </header>
+
+      {winners.length > 0 && (
+        <div className="winner-banner" data-testid="week-winner">
+          <Confetti show />
+          <Crown />
+          <div>
+            <p>Weekly winner</p>
+            <strong>{winners.map((row) => displayName(row, winners)).join(" & ")}</strong>
+          </div>
+        </div>
+      )}
+
+      {boot.leaderboard && boot.leaderboard.length > 0 && (
+        <ol className="liveboard" data-testid="live-board">
+          {boot.leaderboard
+            .slice()
+            .sort((a, b) => b.correct - a.correct || a.full_name.localeCompare(b.full_name))
+            .map((row) => (
+              <li key={row.player_id}>
+                <span>
+                  {row.winner && <Crown size={14} />}
+                  {displayName(row, boot.leaderboard ?? [])}
+                </span>
+                <b>{row.correct}</b>
+              </li>
+            ))}
+        </ol>
+      )}
+
+      {!boot.me && (
+        <section className="panel">
+          <h2>Open your player link to make picks</h2>
+          <p>The admin link can run the pool. Picks use your own private link, and this phone will remember it.</p>
+        </section>
+      )}
+
+      <div className="games">
+        {games.map((game) => {
+          const mine = picks[game.id];
+          const decided = game.status === "final";
+          return (
+            <article key={game.id} className="game" data-testid={`game-${game.slot}`}>
+              <header>
+                <span>{formatKickoff(game.kickoff)}</span>
+                <span className={game.status === "in_progress" ? "live" : ""}>
+                  {game.status === "final" && game.is_tie
+                    ? "Tie"
+                    : game.status === "final"
+                      ? "Final"
+                      : game.status === "in_progress"
+                        ? "Live"
+                        : game.locked
+                          ? "Locked"
+                          : game.is_mnf
+                            ? "Monday night"
+                            : ""}
+                </span>
+              </header>
+              <div className="match">
+                {[game.away, game.home].map((team) => {
+                  const selected = mine === team.id;
+                  const won = decided && !game.is_tie && game.winner_team_id === team.id;
+                  const lost = decided && selected && !won;
+                  const score = team.id === game.away.id ? game.away_score : game.home_score;
+                  return (
+                    <button
+                      key={team.id}
+                      type="button"
+                      className={`team${selected ? " selected" : ""}${won ? " good" : ""}${lost ? " bad" : ""}`}
+                      style={{ "--team": readableTeamColor(team.color) } as CSSProperties}
+                      aria-pressed={selected}
+                      disabled={game.locked || !boot.me}
+                      data-testid={`pick-${game.slot}-${team.id}`}
+                      onClick={() => choose(game, team.id)}
+                    >
+                      <img src={team.logo} alt="" width={40} height={40} />
+                      <span>
+                        <small>{team.location}</small>
+                        <strong>{team.short_name}</strong>
+                      </span>
+                      {score != null && <b className="score">{score}</b>}
+                    </button>
+                  );
+                })}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <section className="panel mnf">
+        <h2>Monday total</h2>
+        <p>Combined points in the Monday night game. 0 to 150. Closest guess breaks a tie for the week.</p>
+        <input
+          data-testid="mnf-guess"
+          inputMode="numeric"
+          aria-label="Monday night total"
+          value={guess}
+          disabled={!boot.me || (boot.season?.lock_mode === "kickoff"
+            ? !!boot.games.find((game) => game.is_mnf)?.locked
+            : poolLocked)}
+          onChange={(event) => {
+            const next = event.target.value.replace(/[^\d]/g, "").slice(0, 3);
+            setGuess(next);
+            guessRef.current = next.trim() === "" ? null : Number(next);
+          }}
+          onBlur={() => {
+            if (!guessOk) {
+              setMessage("Monday total must be 0–150");
+              setState("error");
+              return;
+            }
+            if (guessNumber !== boot.my_guess) enqueue(picksRef.current, guessNumber);
+          }}
+        />
+      </section>
+    </div>
+  );
+}
