@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import { savePicks } from "../lib/api";
 import { displayName } from "../lib/names";
 import { rankBy } from "../lib/rank";
@@ -148,9 +148,10 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                             : ""}
                 </span>
               </header>
-              <div className="match">
-                {[game.away, game.home].map((team) => {
+              <div className={mine ? "match picked" : "match"}>
+                {[game.away, game.home].map((team, index) => {
                   const selected = mine === team.id;
+                  const aside = Boolean(mine) && !selected;
                   const winner = decided && !game.is_tie && game.winner_team_id === team.id;
                   let result = "";
                   if (selected && decided && game.is_tie) result = " tie";
@@ -161,30 +162,32 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                   const score = showScore(game.status) ? raw : null;
                   const paint = teamCardColors(team.color);
                   return (
-                    <button
-                      key={team.id}
-                      type="button"
-                      className={`team${selected ? " selected" : ""}${result}`}
-                      style={{ "--team": paint.fill, "--ink": paint.ink, "--ring": paint.ring } as CSSProperties}
-                      aria-pressed={selected}
-                      disabled={game.locked || !boot.me}
-                      data-testid={`pick-${game.slot}-${team.id}`}
-                      onClick={() => choose(game, team.id)}
-                    >
-                      <span className="team-row">
-                        <Helmet id={team.id} width={44} />
-                        <span className="team-name">
-                          <small>{team.location}</small>
-                          <strong>{team.short_name}</strong>
+                    <Fragment key={team.id}>
+                      {index === 1 && mine ? <span className="versus" aria-hidden="true">@</span> : null}
+                      <button
+                        type="button"
+                        className={`team${selected ? " selected" : ""}${aside ? " aside" : ""}${result}`}
+                        style={{ "--team": paint.fill, "--ink": paint.ink, "--ring": paint.ring } as CSSProperties}
+                        aria-pressed={selected}
+                        disabled={game.locked || !boot.me}
+                        data-testid={`pick-${game.slot}-${team.id}`}
+                        onClick={() => choose(game, team.id)}
+                      >
+                        <span className="team-row">
+                          <Helmet id={team.id} width={aside ? 36 : 44} />
+                          <span className="team-name">
+                            <small>{team.location}</small>
+                            <strong>{team.short_name}</strong>
+                          </span>
+                          {!selected && winner && <span className="winner-mark">W</span>}
+                          {score != null && <b className="score">{score}</b>}
                         </span>
-                        {!selected && winner && <span className="winner-mark">W</span>}
-                        {score != null && <b className="score">{score}</b>}
-                      </span>
-                      {selected && !decided && <em className="pick-badge">Your pick ✓</em>}
-                      {selected && decided && game.is_tie && <em className="pick-badge tie">Tie</em>}
-                      {selected && decided && !game.is_tie && winner && <em className="pick-badge right">✓ Right</em>}
-                      {selected && decided && !game.is_tie && !winner && <em className="pick-badge wrong">✗ Wrong</em>}
-                    </button>
+                        {selected && !decided && <em className="pick-badge">Your pick ✓</em>}
+                        {selected && decided && game.is_tie && <em className="pick-badge tie">Tie</em>}
+                        {selected && decided && !game.is_tie && winner && <em className="pick-badge right">✓ Right</em>}
+                        {selected && decided && !game.is_tie && !winner && <em className="pick-badge wrong">✗ Wrong</em>}
+                      </button>
+                    </Fragment>
                   );
                 })}
               </div>

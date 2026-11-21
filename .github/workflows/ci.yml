@@ -39,3 +39,4 @@ jobs:
       - run: node tests/smoke/refresh-timeout.mjs
       - run: node tests/smoke/legacy-abort.mjs
       - run: node tests/smoke/history-align.mjs
+      - run: node tests/smoke/week-fit.mjs
