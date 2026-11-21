@@ -4,5 +4,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  // Down-level syntax for Safari 14 / Chrome 100 class phones. Runtime APIs
+  // newer than that (AbortSignal.timeout and the like) are guarded in source.
+  build: { target: "safari14" },
   server: { host: "127.0.0.1", port: 5173 },
 });

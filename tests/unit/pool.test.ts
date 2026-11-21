@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { displayName } from "../../src/lib/names.ts";
 import { ordinal, rankByTotal } from "../../src/lib/rank.ts";
 import { highScoreWasTied, scoreEntry, seasonTotal, weekComplete, weeklyWinners, type ScoreEntry, type ScoreGame } from "../../src/lib/scoring.ts";
-import { contrast, thanksgivingWindow, themeForDate, THEMES } from "../../src/lib/theme.ts";
+import { TEAMS } from "../../src/lib/teams.ts";
+import { contrast, teamCardColors, thanksgivingWindow, themeForDate, THEMES } from "../../src/lib/theme.ts";
 import { zonedToUtc } from "../../src/lib/time.ts";
 import { loadExport } from "../../scripts/lib/parseExport.ts";
 import path from "node:path";
@@ -218,6 +219,18 @@ describe("themes and clock", () => {
     expect(themeForDate(new Date("2026-12-25T20:00:00Z"), "playoffs")).toBe("christmas");
     const thanks = thanksgivingWindow(2026);
     expect(thanks).toEqual({ start: 20261123, end: 20261129 });
+  });
+
+  it("keeps selected card text at least 4.5:1 for every team", () => {
+    const colors = [...TEAMS.map((team) => team.color), "#000000"];
+    for (const color of colors) {
+      const paint = teamCardColors(color);
+      expect(contrast(paint.ink, paint.fill), color).toBeGreaterThanOrEqual(4.5);
+    }
+    const black = teamCardColors("#000000");
+    expect(black.fill.toLowerCase()).toBe("#1a1a1a");
+    expect(black.ring.toLowerCase()).toBe("#a5acaf");
+    expect(black.ink.toLowerCase()).toBe("#fffaf0");
   });
 
   it("keeps text contrast in every theme", () => {

@@ -3,7 +3,7 @@ import { savePicks } from "../lib/api";
 import { displayName } from "../lib/names";
 import { rankBy } from "../lib/rank";
 import { showScore } from "../lib/scores";
-import { luminance, readableTeamColor } from "../lib/theme";
+import { teamCardColors } from "../lib/theme";
 import { formatCountdown, formatKickoff } from "../lib/time";
 import type { Boot, Game } from "../lib/types";
 import { Confetti, Crown, Logo, Missing } from "../widgets";
@@ -159,24 +159,27 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                   else if (!selected && winner) result = " winner";
                   const raw = team.id === game.away.id ? game.away_score : game.home_score;
                   const score = showScore(game.status) ? raw : null;
+                  const paint = teamCardColors(team.color);
                   return (
                     <button
                       key={team.id}
                       type="button"
                       className={`team${selected ? " selected" : ""}${result}`}
-                      style={{ "--team": readableTeamColor(team.color), "--ink": luminance(readableTeamColor(team.color)) > 0.45 ? "#16120a" : "#fffaf0" } as CSSProperties}
+                      style={{ "--team": paint.fill, "--ink": paint.ink, "--ring": paint.ring } as CSSProperties}
                       aria-pressed={selected}
                       disabled={game.locked || !boot.me}
                       data-testid={`pick-${game.slot}-${team.id}`}
                       onClick={() => choose(game, team.id)}
                     >
-                      <Logo src={team.logo} size={36} />
-                      <span className="team-name">
-                        <small>{team.location}</small>
-                        <strong>{team.short_name}</strong>
+                      <span className="team-row">
+                        <Logo src={team.logo} size={36} />
+                        <span className="team-name">
+                          <small>{team.location}</small>
+                          <strong>{team.short_name}</strong>
+                        </span>
+                        {!selected && winner && <span className="winner-mark">W</span>}
+                        {score != null && <b className="score">{score}</b>}
                       </span>
-                      {!selected && winner && <span className="winner-mark">W</span>}
-                      {score != null && <b className="score">{score}</b>}
                       {selected && !decided && <em className="pick-badge">Your pick ✓</em>}
                       {selected && decided && game.is_tie && <em className="pick-badge tie">Tie</em>}
                       {selected && decided && !game.is_tie && winner && <em className="pick-badge right">✓ Right</em>}

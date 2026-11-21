@@ -216,6 +216,54 @@ export function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+const INK_DARK = "#16120a";
+const INK_LIGHT = "#fffaf0";
+const NEAR_BLACK = "#1a1a1a";
+const SILVER_RING = "#A5ACAF";
+
+/** Ink that contrasts more with this card fill. */
+export function inkForFill(fill: string): string {
+  return contrast(INK_DARK, fill) >= contrast(INK_LIGHT, fill) ? INK_DARK : INK_LIGHT;
+}
+
+/**
+ * Selected-card paint. Pure black (Raiders, and Steelers when ESPN sends 000000)
+ * stays a near-black card with a silver ring, not a silver card.
+ */
+function mixHex(from: string, to: string, amount: number): string {
+  const a = parseInt(from.slice(1), 16);
+  const b = parseInt(to.slice(1), 16);
+  const channelAt = (shift: number) => {
+    const start = (a >> shift) & 255;
+    const end = (b >> shift) & 255;
+    return clampByte(start + (end - start) * amount);
+  };
+  const red = channelAt(16);
+  const green = channelAt(8);
+  const blue = channelAt(0);
+  return `#${red.toString(16).padStart(2, "0")}${green.toString(16).padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
+}
+
+export function teamCardColors(hex: string): { fill: string; ink: string; ring: string } {
+  const normalized = hex.startsWith("#") ? hex : `#${hex}`;
+  const black = /^#[0-9a-fA-F]{6}$/.test(normalized) && parseInt(normalized.slice(1), 16) === 0;
+  let fill = black ? NEAR_BLACK : readableTeamColor(normalized);
+  let ink = inkForFill(fill);
+  if (contrast(ink, fill) < 4.5) {
+    const toward = ink === INK_LIGHT ? "#000000" : "#ffffff";
+    for (let step = 1; step <= 20; step += 1) {
+      const next = mixHex(fill, toward, step / 20);
+      const nextInk = inkForFill(next);
+      if (contrast(nextInk, next) >= 4.5) {
+        fill = next;
+        ink = nextInk;
+        break;
+      }
+    }
+  }
+  return { fill, ink, ring: black ? SILVER_RING : INK_LIGHT };
+}
+
 function clampByte(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
 }

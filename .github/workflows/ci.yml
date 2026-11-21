@@ -35,3 +35,6 @@ jobs:
           VITE_SUPABASE_ANON_KEY: sb_publishable_B9FtAXbv5ln6lS3P745C_Q__2SXk7vJ
       - run: node tests/smoke/boot.mjs
       - run: node tests/smoke/signin-race.mjs
+      - run: node tests/smoke/raiders-cards.mjs
+      - run: node tests/smoke/refresh-timeout.mjs
+      - run: node tests/smoke/legacy-abort.mjs
