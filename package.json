@@ -11,7 +11,9 @@
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
     "import": "tsx scripts/import-history.ts",
+    "import:sql": "tsx scripts/import-sql.ts",
     "tokens": "tsx scripts/generate-tokens.ts",
+    "tokens:sql": "tsx scripts/tokens-sql.ts",
     "icons": "python3 scripts/make-icons.py"
   },
   "dependencies": {

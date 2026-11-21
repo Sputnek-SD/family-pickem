@@ -25,65 +25,41 @@ There are no passwords. Each person gets a private link. Opening it remembers th
 
 ## What you do in Supabase, in order
 
-You need the database password for the project (Dashboard → Project Settings → Database). You do **not** put that password, the secret key, or any player link in this repo.
+You do not need the database password or the project secret key. Apply the SQL with the management connection, then deploy the function. Do not run `supabase/seed.sql` on the hosted project. It only turns on a test clock for local development.
 
-1. In the Supabase dashboard, open **Database → Extensions** and enable **pg_cron** and **pg_net**. The schedule migration also tries to enable them. If it cannot, enable them here and run step 2 again.
-2. From this repo, with the Supabase CLI logged in and linked to the project:
-
-   ```bash
-   supabase db push
-   ```
-
-   That applies three migrations, in order:
-
+1. Enable the **pg_cron** and **pg_net** extensions.
+2. Apply the three migrations in filename order:
    - `supabase/migrations/20261121002630_schema.sql` — tables, the 32 teams, the roster
    - `supabase/migrations/20261121002631_functions.sql` — scoring, the lock, and the functions the website calls
    - `supabase/migrations/20261121002632_schedule.sql` — the score-sync jobs
 
-   Do **not** run `supabase/seed.sql` on the hosted project. It only turns on a test clock for local development.
-
-3. Deploy the score function:
-
-   ```bash
-   supabase functions deploy sync-nfl
-   ```
-
-   `verify_jwt` is off for this function. It accepts the project’s secret key instead, and it uses that key only on the server.
-
-4. In the dashboard SQL editor, store two Vault secrets. Use the project’s **secret** key, never the publishable key:
-
-   ```sql
-   select vault.create_secret('https://yqbepfcgyzrvsicvxukb.supabase.co', 'project_url');
-   select vault.create_secret('YOUR_SECRET_KEY', 'secret_key');
-   ```
-
-5. Confirm the jobs exist:
+   The jobs call `https://yqbepfcgyzrvsicvxukb.supabase.co/functions/v1/sync-nfl` with the public publishable key. There is no Vault secret.
+3. Deploy the score function: `supabase functions deploy sync-nfl`. Do not set any function secrets. Supabase injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; the function writes with those. The publishable key is not a JWT, so the platform JWT check is off and the function checks the key itself. A second call within two minutes does not hit ESPN.
+4. Confirm the jobs:
 
    ```sql
    select jobname, schedule from cron.job;
    ```
 
-   You should see `sync-nfl-game-window` (every 10 minutes Thursday through Monday, UTC) and `sync-nfl-offdays` (every 6 hours on Tuesday and Wednesday, UTC). Tuesday morning Pacific is covered by the off-day job, so the next week opens even if a game is stuck. If the list is empty, run the schedule migration again after the extensions and the secrets are in place. The job does nothing until both secrets exist.
-
-   The function reads ESPN’s public scoreboard. If ESPN is down it keeps the last good scores and tries again on the next run. It will not overwrite a result that came from the 2026 sheet or from Brad.
-
-6. Load the 2026 season (weeks 1–11). This checks itself against the standings export and stops if anything does not match:
+   You should see `sync-nfl-game-window` (every 10 minutes Thursday through Monday, UTC) and `sync-nfl-offdays` (every 6 hours on Tuesday and Wednesday, UTC). If the list is empty, the extensions were not on yet: enable them and run the schedule migration again. If ESPN is down, the last good scores stay and the next run tries again. A result from the sheet or from Brad is not overwritten.
+5. Build the 2026 import and run that file in the SQL tool:
 
    ```bash
-   DATABASE_URL='postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres' npm run import
+   npm run import:sql > import.sql
    ```
 
-7. Print the private links. This writes the hashes into the database and prints the links on your machine. It does not save the links in git.
+   The last query lists mismatches with the sheet. No rows means it matches. `import.sql` is gitignored.
+6. Build the links, then run only the hash file:
 
    ```bash
-   APP_URL='https://YOUR_PAGES_SITE' npm run tokens
+   APP_URL='https://YOUR_PAGES_SITE' npm run tokens:sql
    ```
 
-   Send each person only their own link. Send Brad the admin link too. To replace a lost link, run `npm run tokens -- --rotate`.
+   The command prints two paths and not the links. The text file has the links. The SQL file has only hashes. Run the SQL file, then open the text file and send each person their own link. Do not commit either file.
 
 ## GitHub Pages
 
-Pushing to `main` runs `.github/workflows/pages.yml`, which builds the site and publishes it. In the repo settings, set **Pages → Source** to **GitHub Actions** once. The site uses the public Supabase URL and the publishable key. Those are meant to be public. Row Level Security and the token checks are what keep picks private.
+Pushing to `main` runs `.github/workflows/pages.yml`, which builds the site and publishes it. GitHub Pages has to be switched on once by hand under Settings → Pages → GitHub Actions; the workflow token cannot turn it on. The site uses the public Supabase URL and the publishable key. Those are meant to be public. Row Level Security and the token checks are what keep picks private.
 
 Players open the site, then open their private link once. Add to Home Screen works on iPhone and Android.
 
@@ -91,7 +67,7 @@ Players open the site, then open their private link once. Add to Home Screen wor
 
 On the admin page, under **New season**, type the year and confirm. The roster stays. The finished season is archived, with its champion (or co-champions, if the season total is tied). The new season starts empty and the score sync fills the schedule. All-time records appear once a second season exists.
 
-From that same page Brad can correct a result, mark a game postponed or excluded, fix someone’s pick (a note is required), add or rename or deactivate a player, and change the lock. Every change is listed under Recent changes. A brand-new player still needs a link from the token script.
+From that same page Brad can correct a result, mark a game postponed or excluded, fix someone’s pick (a note is required), add or rename or deactivate a player, and change the lock. Every change is listed under Recent changes. A brand-new player still needs a link from `npm run tokens:sql`.
 
 ## Checks
 

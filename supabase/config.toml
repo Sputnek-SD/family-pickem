@@ -386,6 +386,8 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+# The publishable key is not a JWT, so the gateway JWT check would reject cron.
+# sync-nfl checks that key itself and writes with the injected service role.
 [functions.sync-nfl]
 verify_jwt = false
 

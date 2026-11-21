@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import path from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -38,6 +39,12 @@ describe("database rules", () => {
 
   beforeAll(async () => {
     await client.connect();
+    const { execFileSync } = await import("node:child_process");
+    const sql = execFileSync(path.resolve("node_modules/.bin/tsx"), ["scripts/import-sql.ts"], {
+      cwd: path.resolve("."),
+      encoding: "utf8",
+    });
+    await client.query(sql);
     const chelsea = await client.query(
       "select id, token_hash from private.players where full_name = 'Chelsea Jess'",
     );
@@ -238,6 +245,34 @@ describe("database rules", () => {
     } finally {
       await client.query("rollback");
     }
+  });
+
+  it("rate-limits score sync and hides that claim from the public API", async () => {
+    await client.query("delete from private.sync_log");
+    const first = await client.query("select public.claim_sync() as ok");
+    const second = await client.query("select public.claim_sync() as ok");
+    expect(first.rows[0].ok).toBe(true);
+    expect(second.rows[0].ok).toBe(false);
+    const anonCall = await rpc("claim_sync", {});
+    expect(anonCall.status).toBeGreaterThanOrEqual(400);
+    await client.query("delete from private.sync_log");
+  });
+
+  it("loads 2026 from the generated SQL and the sheet check is empty", async () => {
+    const { execFileSync } = await import("node:child_process");
+    const sql = execFileSync(path.resolve("node_modules/.bin/tsx"), ["scripts/import-sql.ts"], {
+      cwd: path.resolve("."),
+      encoding: "utf8",
+    });
+    const result = await client.query(sql);
+    const rows = Array.isArray(result) ? result[result.length - 1].rows : result.rows;
+    expect(rows).toEqual([]);
+    const toby = await client.query("select private.report_standings(2026) as report");
+    const row = toby.rows[0].report.players.find(
+      (player: { full_name: string }) => player.full_name === "Toby Spurlock",
+    );
+    expect(row.total).toBe(98);
+    expect(row.wins).toBe(4);
   });
 
   it("still matches the sheet after the other checks", async () => {

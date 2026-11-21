@@ -1683,6 +1683,26 @@ begin
 end;
 $$;
 
+-- True when this call may hit ESPN. A second call within two minutes is a no-op.
+-- Uses the real clock, not the test clock, so a frozen clock cannot block scoring.
+create or replace function private.claim_sync()
+returns boolean
+language plpgsql
+as $$
+begin
+  perform pg_advisory_xact_lock(481516234);
+  if exists (
+    select 1 from private.sync_log
+    where at > pg_catalog.now() - interval '2 minutes'
+  ) then
+    return false;
+  end if;
+  insert into private.sync_log (ok, detail)
+  values (true, '{"phase":"claimed"}'::jsonb);
+  return true;
+end;
+$$;
+
 create or replace function private.report_standings(p_year int)
 returns jsonb
 language plpgsql
@@ -1804,6 +1824,10 @@ create or replace function public.log_sync(p_detail jsonb)
 returns jsonb language plpgsql security definer set search_path = private, extensions, pg_temp
 as $$ begin return private.log_sync(p_detail); end $$;
 
+create or replace function public.claim_sync()
+returns boolean language plpgsql security definer set search_path = private, extensions, pg_temp
+as $$ begin return private.claim_sync(); end $$;
+
 revoke all on all functions in schema private from public, anon, authenticated, service_role;
 
 do $$
@@ -1819,7 +1843,7 @@ begin
         'bootstrap', 'save_picks', 'week_board', 'player_page',
         'admin_override_game', 'admin_fix_pick', 'admin_entries',
         'admin_upsert_player', 'admin_set_lock', 'admin_start_season',
-        'admin_set_clock', 'admin_audit', 'apply_scoreboard', 'sync_plan', 'log_sync'
+        'admin_set_clock', 'admin_audit', 'apply_scoreboard', 'sync_plan', 'log_sync', 'claim_sync'
       )
   loop
     execute format('revoke all on function %s from public, anon, authenticated, service_role', r.sig);
@@ -1842,3 +1866,4 @@ grant execute on function public.admin_audit(text) to anon, authenticated;
 grant execute on function public.apply_scoreboard(jsonb) to service_role;
 grant execute on function public.sync_plan() to service_role;
 grant execute on function public.log_sync(jsonb) to service_role;
+grant execute on function public.claim_sync() to service_role;

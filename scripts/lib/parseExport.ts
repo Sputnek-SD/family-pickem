@@ -137,11 +137,13 @@ function estimateKickoff(week: number, slot: number, count: number): string {
   return iso(sun.y, sun.m, sun.d, 13, 0);
 }
 
-export function loadExport(dir: string): {
+export type ParsedExport = {
   weeks: ParsedWeek[];
   standings: StandingRow[];
   champions: ChampionRow[];
-} {
+};
+
+export function loadExport(dir: string): ParsedExport {
   const schedule = parseCsv(readFileSync(path.join(dir, "schedule.csv"), "utf8"));
   const header = schedule[0];
   const col = (name: string) => header.indexOf(name);

@@ -1,6 +1,9 @@
 node_modules
 dist
 .tokens.local.json
+.tokens.local.txt
+tokens.sql
+import.sql
 .env.local
 .env.development.local
 playwright-report
