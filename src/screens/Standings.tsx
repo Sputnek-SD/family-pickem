@@ -4,8 +4,8 @@ import type { Boot } from "../lib/types";
 import { Crown } from "../widgets";
 
 export function StandingsScreen({ boot, onOpen }: { boot: Boot; onOpen: (id: string) => void }) {
-  const ranked = rankByTotal(boot.standings);
-  const latest = [...boot.weeks].reverse().find((week) => week.complete && week.winner_ids.length);
+  const ranked = rankByTotal(boot.standings ?? []);
+  const latest = [...(boot.weeks ?? [])].reverse().find((week) => week.complete && week.winner_ids.length);
   return (
     <div className="screen">
       <header className="hero compact">

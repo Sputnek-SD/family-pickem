@@ -258,6 +258,18 @@ describe("database rules", () => {
     await client.query("delete from private.sync_log");
   });
 
+  it("claims again 90 seconds after the last claim even when a done row is newer", async () => {
+    await client.query("delete from private.sync_log");
+    await client.query(
+      `insert into private.sync_log (at, ok, detail) values
+       (pg_catalog.now() - interval '91 seconds', true, '{"phase":"claimed"}'),
+       (pg_catalog.now(), true, '{"phase":"done"}')`,
+    );
+    const again = await client.query("select public.claim_sync() as ok");
+    expect(again.rows[0].ok).toBe(true);
+    await client.query("delete from private.sync_log");
+  });
+
   it("lets auto scores resume unless Brad locks in a result", async () => {
     await client.query("begin");
     try {

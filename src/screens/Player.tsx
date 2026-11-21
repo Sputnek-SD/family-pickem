@@ -33,7 +33,7 @@ export function PlayerScreen({
   if (!page) return <p className="lede">Loading…</p>;
 
   const finished = page.weeks.filter((week) => {
-    const meta = boot.weeks.find((item) => item.id === week.week_id);
+    const meta = (boot.weeks ?? []).find((item) => item.id === week.week_id);
     return meta ? meta.complete : week.score != null;
   });
   const scored = finished.filter((week) => week.entered);
@@ -74,7 +74,7 @@ export function PlayerScreen({
           ))}
         </svg>
       )}
-      {page.weeks.some((week) => boot.weeks.find((item) => item.id === week.week_id && !item.complete)) && (
+      {page.weeks.some((week) => (boot.weeks ?? []).find((item) => item.id === week.week_id && !item.complete)) && (
         <p className="fine">The chart skips the week still in progress.</p>
       )}
       <ol className="weeks">
@@ -87,7 +87,7 @@ export function PlayerScreen({
             <b>
               {!week.entered
                 ? "—"
-                : boot.weeks.find((item) => item.id === week.week_id && !item.complete)
+                : (boot.weeks ?? []).find((item) => item.id === week.week_id && !item.complete)
                   ? `${week.score ?? 0} so far`
                   : week.score == null
                     ? "…"

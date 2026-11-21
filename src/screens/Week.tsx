@@ -9,8 +9,8 @@ import type { Boot, Game } from "../lib/types";
 import { Confetti, Crown, Logo, Missing } from "../widgets";
 
 export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
-  const week = boot.weeks.find((item) => item.id === boot.current_week_id) ?? null;
-  const [picks, setPicks] = useState(boot.my_picks);
+  const week = boot.weeks?.find((item) => item.id === boot.current_week_id) ?? null;
+  const [picks, setPicks] = useState(boot.my_picks ?? {});
   const [guess, setGuess] = useState(boot.my_guess == null ? "" : String(boot.my_guess));
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -21,8 +21,8 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
   picksRef.current = picks;
 
   useEffect(() => {
-    setPicks(boot.my_picks);
-    picksRef.current = boot.my_picks;
+    setPicks(boot.my_picks ?? {});
+    picksRef.current = boot.my_picks ?? {};
     setGuess(boot.my_guess == null ? "" : String(boot.my_guess));
     guessRef.current = boot.my_guess;
   }, [boot.current_week_id]);
@@ -33,7 +33,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
     return () => window.clearInterval(timer);
   }, [boot.now]);
 
-  const games = boot.games.filter((game) => game.status !== "excluded");
+  const games = (boot.games ?? []).filter((game) => game.status !== "excluded");
   const picked = games.filter((game) => picks[game.id]).length;
   const guessNumber = guess.trim() === "" ? null : Number(guess);
   const guessOk = guessNumber == null || (Number.isInteger(guessNumber) && guessNumber >= 0 && guessNumber <= 150);
@@ -98,7 +98,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
             You haven’t finished this week yet.
           </p>
         )}
-        <Missing people={boot.missing} />
+        <Missing people={boot.missing ?? []} />
         <p className={`save ${state}`} data-testid="saved-state">
           {message}
         </p>
@@ -199,7 +199,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
           aria-label="Monday night total"
           value={guess}
           disabled={!boot.me || (boot.season?.lock_mode === "kickoff"
-            ? !!boot.games.find((game) => game.is_mnf)?.locked
+            ? !!(boot.games ?? []).find((game) => game.is_mnf)?.locked
             : poolLocked)}
           onChange={(event) => {
             const next = event.target.value.replace(/[^\d]/g, "").slice(0, 3);

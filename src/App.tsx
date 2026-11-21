@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { bootstrap, clearToken, readTokens, writeToken } from "./lib/api";
+import { useLiveRefresh } from "./lib/liveRefresh";
 import { THEMES, themeForDate } from "./lib/theme";
 import type { Boot } from "./lib/types";
 import { AdminScreen } from "./screens/Admin";
@@ -109,15 +110,10 @@ export function App() {
     if (kicker) kicker.textContent = colors.kicker;
   }, [boot?.now, boot?.phase]);
 
-  useEffect(() => {
-    if (!boot?.current_week_id) return;
-    const week = boot.weeks.find((item) => item.id === boot.current_week_id);
-    if (!week || week.complete) return;
-    const timer = window.setInterval(() => {
-      load().catch(() => undefined);
-    }, 60000);
-    return () => window.clearInterval(timer);
-  }, [boot?.current_week_id, boot?.weeks, load]);
+  const currentWeek = boot?.current_week_id
+    ? boot.weeks?.find((item) => item.id === boot.current_week_id)
+    : undefined;
+  useLiveRefresh(() => load().then(() => undefined), !!currentWeek && !currentWeek.complete);
 
   const themeName = boot ? THEMES[themeForDate(new Date(boot.now), boot.phase ?? "regular")].kicker : "GAMEDAY";
 
@@ -158,14 +154,14 @@ export function App() {
           <BoardScreen
             boot={boot}
             tokens={tokens}
-            weekId={
+              weekId={
               route.week
-                ? boot.weeks.find((week) => String(week.week_number) === route.week && week.complete)?.id
-                  ?? boot.weeks.find((week) => String(week.week_number) === route.week)?.id
+                ? (boot.weeks ?? []).find((week) => String(week.week_number) === route.week && week.complete)?.id
+                  ?? (boot.weeks ?? []).find((week) => String(week.week_number) === route.week)?.id
                 : latestFinished?.id
             }
             onWeek={(id) => {
-              const week = boot.weeks.find((item) => item.id === id);
+              const week = (boot.weeks ?? []).find((item) => item.id === id);
               go(`#/history/${week?.week_number ?? ""}`);
             }}
           />
