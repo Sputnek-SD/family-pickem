@@ -110,7 +110,9 @@ export function App() {
     if (kicker) kicker.textContent = colors.kicker;
   }, [boot?.now, boot?.phase]);
 
-  const currentWeek = boot?.weeks.find((item) => item.id === boot.current_week_id);
+  const currentWeek = boot?.current_week_id
+    ? boot.weeks?.find((item) => item.id === boot.current_week_id)
+    : undefined;
   useLiveRefresh(() => load().then(() => undefined), !!currentWeek && !currentWeek.complete);
 
   const themeName = boot ? THEMES[themeForDate(new Date(boot.now), boot.phase ?? "regular")].kicker : "GAMEDAY";
@@ -152,14 +154,14 @@ export function App() {
           <BoardScreen
             boot={boot}
             tokens={tokens}
-            weekId={
+              weekId={
               route.week
-                ? boot.weeks.find((week) => String(week.week_number) === route.week && week.complete)?.id
-                  ?? boot.weeks.find((week) => String(week.week_number) === route.week)?.id
+                ? (boot.weeks ?? []).find((week) => String(week.week_number) === route.week && week.complete)?.id
+                  ?? (boot.weeks ?? []).find((week) => String(week.week_number) === route.week)?.id
                 : latestFinished?.id
             }
             onWeek={(id) => {
-              const week = boot.weeks.find((item) => item.id === id);
+              const week = (boot.weeks ?? []).find((item) => item.id === id);
               go(`#/history/${week?.week_number ?? ""}`);
             }}
           />

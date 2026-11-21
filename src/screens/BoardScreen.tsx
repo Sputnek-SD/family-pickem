@@ -39,10 +39,9 @@ export function BoardScreen({
     loadBoard().catch(() => undefined);
   }, [loadBoard]);
 
-  const current = boot.weeks.find((week) => week.id === boot.current_week_id);
+  const weeks = (boot.weeks ?? []).filter((week) => week.released);
+  const current = (boot.weeks ?? []).find((week) => week.id === boot.current_week_id);
   useLiveRefresh(loadBoard, !!current && !current.complete && id === current.id);
-
-  const weeks = boot.weeks.filter((week) => week.released);
   const winners = board?.rows.filter((row) => row.winner) ?? [];
   const activeChip = useRef<HTMLButtonElement>(null);
 

@@ -49,7 +49,7 @@ export function AdminScreen({ boot, admin, onChanged }: { boot: Boot; admin: str
     }
   }
 
-  const games = boot.games;
+  const games = boot.games ?? [];
   const weekId = boot.current_week_id;
 
   return (
