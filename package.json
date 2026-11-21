@@ -1,0 +1,39 @@
+{
+  "name": "family-pickem",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "import": "tsx scripts/import-history.ts",
+    "import:sql": "tsx scripts/import-sql.ts",
+    "tokens": "tsx scripts/generate-tokens.ts",
+    "tokens:sql": "tsx scripts/tokens-sql.ts",
+    "icons": "python3 scripts/make-icons.py"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.2.5",
+    "@fontsource/outfit": "^5.2.5",
+    "@supabase/supabase-js": "^2.86.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.10.0",
+    "@types/pg": "^8.15.6",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "pg": "^8.16.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1",
+    "vitest": "^2.1.9"
+  }
+}
