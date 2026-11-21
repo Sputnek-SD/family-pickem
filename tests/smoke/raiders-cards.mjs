@@ -290,7 +290,7 @@ try {
       if (viewport.name === "desktop") {
         if (split.content === "none") problems.push("column divider is missing");
         if (!(split.width >= 1 && split.width <= 2)) problems.push(`divider width ${split.width}`);
-        if (!(split.opacity >= 0.25 && split.opacity <= 0.35)) problems.push(`divider opacity ${split.opacity}`);
+        if (!(split.opacity >= 0.45 && split.opacity <= 0.5)) problems.push(`divider opacity ${split.opacity}`);
         if (!(split.gap >= 40 && split.gap <= 56)) problems.push(`column gutter ${split.gap}`);
         const [leftCard, rightCard] = split.cards;
         if (!(leftCard.right < split.lineX && split.lineX < rightCard.left)) {
@@ -308,6 +308,12 @@ try {
       } else if (split.content !== "none") {
         problems.push(`phone shows a column divider (${split.content})`);
       }
+      const at = await page.locator(".game").first().locator(".versus").evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { display: style.display, size: style.fontSize };
+      });
+      if (viewport.name === "phone" && at.display !== "none") problems.push(`phone @ is ${at.display}`);
+      if (viewport.name === "desktop" && at.size !== "16px") problems.push(`desktop @ is ${at.size}`);
       await card.screenshot({ path: `${shots}/${viewport.name}-raiders-${state}.png` });
       if (problems.length) failures.push(`${viewport.name} ${state}\n${problems.join("\n")}`);
       await context.close();
