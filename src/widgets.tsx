@@ -62,58 +62,59 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
     ...ranked,
     ...board.rows.filter((row) => row.correct == null),
   ];
-  const cols = `148px repeat(${games.length + 1}, 72px)`;
   return (
-    <div className="gridwrap" data-testid="pick-grid">
-      <div className="gridrow head" style={{ gridTemplateColumns: cols }}>
-        <div className="sticky">Player</div>
-        {games.map((game) => (
-          <div key={game.id} className="gh" title={`${game.away.name} at ${game.home.name}`}>
-            {game.status === "final" && game.is_tie ? <b>TIE</b> : <b>{game.away.id}</b>}
-            <span>@ {game.home.id}</span>
-          </div>
-        ))}
-        <div className="gh">
-          <b>MNF</b>
-          <span>{board.week.mnf_total ?? "—"}</span>
-        </div>
-      </div>
-      {ordered.map((row) => {
-        const place = placeOf.get(row.player_id);
-        return (
-          <div
-            className={row.player_id === meId ? "gridrow me" : "gridrow"}
-            style={{ gridTemplateColumns: cols }}
-            key={row.player_id}
-          >
-            <div className="sticky">
-              <span className="who-rank">
-                {place ? place.place : ""}
-                {place?.tied && <em>TIED</em>}
-                {row.winner && <Crown size={14} />}
-              </span>
-              <span>
-                {displayName(row, board.rows)}
-                {row.correct != null && <b>{row.correct}</b>}
-              </span>
+    <div className="grid-scroll">
+      <p className="scroll-hint">Scroll sideways for every game and the Monday guess.</p>
+      <div className="gridwrap" data-testid="pick-grid">
+        <div className="gridrow head">
+          <div className="sticky">Player</div>
+          <div className="sticky-score">Pts</div>
+          {games.map((game) => (
+            <div key={game.id} className="gh" title={`${game.away.name} at ${game.home.name}`}>
+              <img src={game.away.logo} alt="" width={18} height={18} />
+              <b>{game.away.id}</b>
+              <span>@ {game.home.id}</span>
+              {game.status === "final" && game.is_tie && <em className="tied-pill">TIE</em>}
             </div>
-            {games.map((game) => {
-              const pick = row.picks[game.id];
-              const team = pick === game.away.id ? game.away : pick === game.home.id ? game.home : null;
-              let mark = "";
-              if (game.status === "final" && game.is_tie) mark = "tie";
-              else if (game.status === "final" && pick && pick === game.winner_team_id) mark = "good";
-              else if (game.status === "final" && pick) mark = "bad";
-              return (
-                <div key={game.id} className={`cell ${mark}`}>
-                  {game.status === "final" && game.is_tie ? "TIE" : team ? team.id : "–"}
-                </div>
-              );
-            })}
-            <div className="cell">{row.guess ?? "–"}</div>
+          ))}
+          <div className="gh">
+            <b>MNF</b>
+            <span>{board.week.mnf_total ?? "—"}</span>
           </div>
-        );
-      })}
+        </div>
+        {ordered.map((row) => {
+          const place = placeOf.get(row.player_id);
+          return (
+            <div className={row.player_id === meId ? "gridrow me" : "gridrow"} key={row.player_id}>
+              <div className="sticky">
+                <span className="who-rank">
+                  {place ? place.place : ""}
+                  {row.winner && <Crown size={14} />}
+                </span>
+                <span className="who-name">{displayName(row, board.rows)}</span>
+                {place?.tied && <em className="tied-pill">TIED</em>}
+              </div>
+              <div className="sticky-score">{row.correct ?? "–"}</div>
+              {games.map((game) => {
+                const pick = row.picks[game.id];
+                const team = pick === game.away.id ? game.away : pick === game.home.id ? game.home : null;
+                let mark = "";
+                if (game.status === "final" && game.is_tie) mark = "tie";
+                else if (game.status === "final" && pick && pick === game.winner_team_id) mark = "good";
+                else if (game.status === "final" && pick) mark = "bad";
+                const color = team ? readableTeamColor(team.color) : "transparent";
+                return (
+                  <div key={game.id} className={`cell ${mark}`} style={{ "--pick": color } as CSSProperties}>
+                    {team ? <img src={team.logo} alt="" width={22} height={22} /> : null}
+                    <span>{team ? team.id : "–"}</span>
+                  </div>
+                );
+              })}
+              <div className="cell guess">{row.guess ?? "–"}</div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

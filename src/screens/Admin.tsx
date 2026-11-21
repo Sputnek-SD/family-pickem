@@ -285,7 +285,7 @@ function GameEditor({ game, onSave }: { game: Game; onSave: (patch: Record<strin
           onChange={(event) => setTotal(event.target.value.replace(/[^\d]/g, "").slice(0, 3))}
         />
       )}
-      {(game.result_source === "admin" || game.result_source === "sheet") && (
+      {game.result_source === "admin" && (
         <button
           type="button"
           className="secondary"

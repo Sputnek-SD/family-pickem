@@ -3,7 +3,7 @@ import { savePicks } from "../lib/api";
 import { displayName } from "../lib/names";
 import { rankBy } from "../lib/rank";
 import { showScore } from "../lib/scores";
-import { readableTeamColor } from "../lib/theme";
+import { luminance, readableTeamColor } from "../lib/theme";
 import { formatCountdown, formatKickoff } from "../lib/time";
 import type { Boot, Game } from "../lib/types";
 import { Confetti, Crown, Missing } from "../widgets";
@@ -69,7 +69,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
 
   return (
     <div className="screen">
-      <header className="hero week">
+      <header className="hero week poster">
         <p className="kicker" data-testid="theme-kicker">
           {boot.season?.year} · {boot.season?.lock_mode === "kickoff" ? "Locks at kickoff" : "Thursday lock"}
         </p>
@@ -105,7 +105,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
       </header>
 
       {winners.length > 0 && (
-        <div className="winner-banner" data-testid="week-winner">
+        <div className="winner-banner poster" data-testid="week-winner">
           <Confetti show />
           <Crown />
           <div>
@@ -122,7 +122,9 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
         </section>
       )}
 
-      {boot.leaderboard && boot.leaderboard.length > 0 && poolLocked && <WeekBoard rows={boot.leaderboard} />}
+      {boot.leaderboard && boot.leaderboard.length > 0 && poolLocked && (
+        <WeekBoard rows={boot.leaderboard} meId={boot.me?.player_id} />
+      )}
 
       <div className="games">
         {games.map((game) => {
@@ -158,17 +160,19 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                       key={team.id}
                       type="button"
                       className={`team${selected ? " selected" : ""}${won ? " good" : ""}${lost ? " bad" : ""}`}
-                      style={{ "--team": readableTeamColor(team.color) } as CSSProperties}
+                      style={{ "--team": readableTeamColor(team.color), "--ink": luminance(readableTeamColor(team.color)) > 0.45 ? "#16120a" : "#fffaf0" } as CSSProperties}
                       aria-pressed={selected}
                       disabled={game.locked || !boot.me}
                       data-testid={`pick-${game.slot}-${team.id}`}
                       onClick={() => choose(game, team.id)}
                     >
-                      <img src={team.logo} alt="" width={40} height={40} />
+                      <img src={team.logo} alt="" width={44} height={44} />
                       <span>
                         <small>{team.location}</small>
                         <strong>{team.short_name}</strong>
+                        {selected && <em className="your-pick">Your pick</em>}
                       </span>
+                      {selected && <span className="check-mark" aria-hidden="true">✓</span>}
                       {score != null && <b className="score">{score}</b>}
                     </button>
                   );
@@ -209,20 +213,53 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
   );
 }
 
-function WeekBoard({ rows }: { rows: NonNullable<Boot["leaderboard"]> }) {
+function WeekBoard({ rows, meId }: { rows: NonNullable<Boot["leaderboard"]>; meId?: string }) {
+  const [open, setOpen] = useState(false);
   const ranked = rankBy(rows, (row) => row.correct, (row) => row.full_name);
+  const top = ranked.slice(0, 3);
+  const me = ranked.find((row) => row.player_id === meId);
+  if (!open) {
+    return (
+      <div className="strip" data-testid="live-board">
+        <div className="strip-top">
+          {top.map((row) => (
+            <span key={row.player_id}>
+              {row.place} {displayName(row, ranked)} {row.correct}
+            </span>
+          ))}
+        </div>
+        <div className="strip-you">
+          {me && (
+            <strong>
+              You: {me.place}
+              {me.tied ? " TIED" : ""}
+            </strong>
+          )}
+          <button type="button" onClick={() => setOpen(true)}>
+            See all
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
-    <ol className="liveboard" data-testid="live-board">
-      {ranked.map((row) => (
-        <li key={row.player_id}>
-          <span className="place">{row.place}{row.tied && <em>TIED</em>}</span>
-          <span>
-            {row.winner && <Crown size={14} />}
-            {displayName(row, ranked)}
-          </span>
-          <b>{row.correct}</b>
-        </li>
-      ))}
-    </ol>
+    <div className="strip open" data-testid="live-board">
+      <ol>
+        {ranked.map((row) => (
+          <li key={row.player_id} className={row.player_id === meId ? "me" : undefined}>
+            <span>
+              {row.place}
+              {row.tied && <em>TIED</em>}
+              {row.winner && <Crown size={14} />}
+              {displayName(row, ranked)}
+            </span>
+            <b>{row.correct}</b>
+          </li>
+        ))}
+      </ol>
+      <button type="button" onClick={() => setOpen(false)}>
+        Show less
+      </button>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { weekBoard } from "../lib/api";
 import { displayName } from "../lib/names";
 import type { Board, Boot } from "../lib/types";
@@ -36,10 +36,15 @@ export function BoardScreen({
 
   const weeks = boot.weeks.filter((week) => week.released);
   const winners = board?.rows.filter((row) => row.winner) ?? [];
+  const activeChip = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeChip.current?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [id, weeks.length]);
 
   return (
     <div className="screen">
-      <header className="hero compact">
+      <header className="hero compact poster">
         <p className="kicker">Who picked who</p>
         <h1>{board?.week.label ?? "Picks"}</h1>
       </header>
@@ -49,6 +54,7 @@ export function BoardScreen({
             <button
               key={week.id}
               type="button"
+              ref={week.id === id ? activeChip : undefined}
               className={week.id === id ? "chip on" : "chip"}
               data-testid={`history-${week.week_number}`}
               onClick={() => onWeek(week.id)}
@@ -59,7 +65,7 @@ export function BoardScreen({
         </div>
       )}
       {winners.length > 0 && (
-        <div className="winner-banner" data-testid="week-winner">
+        <div className="winner-banner poster" data-testid="week-winner">
           <Confetti show />
           <Crown />
           <div>
@@ -71,7 +77,9 @@ export function BoardScreen({
       {error && <p className="save error">{error}</p>}
       {board && <PickGrid board={board} meId={boot.me?.player_id} />}
       {board?.week.mnf_total != null && board.week.visible && (
-        <p className="lede center">Monday total was {board.week.mnf_total}. The guess column is each player’s number.</p>
+        <p className="lede center">
+          MNF = each player’s Monday-night total guess. Actual: {board.week.mnf_total}.
+        </p>
       )}
     </div>
   );

@@ -86,6 +86,7 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await page.getByTestId("mnf-guess").blur();
   await expect(page.getByTestId("progress")).toContainText("13 of 13");
   await expect(page.getByTestId("saved-state")).toHaveText("Saved");
+  await expect(page.getByText("Your pick").first()).toBeVisible();
 
   const flipped = boot.games[1];
   await page.getByTestId(`pick-${flipped.slot}-${flipped.away.id}`).click();
@@ -95,6 +96,8 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await rpc("admin_set_clock", { p_admin_token: tokens.admin, p_at: "2026-11-20T03:00:00Z" });
   await page.reload();
   await expect(page.getByTestId("countdown")).toContainText("Locked");
+  await expect(page.getByText("See all")).toBeVisible();
+  await expect(page.getByTestId("game-0")).toBeVisible();
   await expect(page.getByTestId(`pick-${flipped.slot}-${flipped.away.id}`)).toBeDisabled();
   const rejected = await fetch(`${api}/rest/v1/rpc/save_picks`, {
     method: "POST",
@@ -123,6 +126,18 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await page.getByTestId("nav-history").click();
   await expect(page.getByTestId("week-winner")).toContainText("Toby");
   await shot(page, "phone-history-week9");
+  await page.getByTestId("history-5").click();
+  await expect(page.getByRole("heading", { name: "Week 5" })).toBeVisible();
+  const giants = page.locator(".gridrow.head .gh").filter({ hasText: "NYG" });
+  await expect(giants).toContainText("@ WSH");
+  await expect(giants.locator(".tied-pill")).toHaveText("TIE");
+  await expect(page.locator(".cell.tie").first()).not.toHaveText("TIE");
+  await giants.evaluate((node) => {
+    const scroller = node.closest(".gridwrap");
+    if (!(scroller instanceof HTMLElement)) return;
+    scroller.scrollLeft = Math.max(0, node.offsetLeft - 188);
+  });
+  await shot(page, "phone-history-week5");
 
   await page.getByTestId("nav-standings").click();
   await page.getByTestId("standing-Toby Spurlock").click();
@@ -164,6 +179,9 @@ test("a player can pick, lock, review, and Brad can run the pool", async ({ page
   await shot(page, "desktop-standings");
   await page.goto("/#/");
   await shot(page, "desktop-week");
+  await page.goto("/#/history/10");
+  await expect(page.getByTestId("pick-grid")).toBeVisible();
+  await shot(page, "desktop-history");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await rpc("admin_set_clock", { p_admin_token: tokens.admin, p_at: "2026-10-31T20:00:00Z" });
