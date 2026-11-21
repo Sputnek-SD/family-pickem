@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { weekBoard } from "../lib/api";
+import { useLiveRefresh } from "../lib/liveRefresh";
 import { displayName } from "../lib/names";
 import type { Board, Boot } from "../lib/types";
 import { Confetti, Crown, PickGrid } from "../widgets";
@@ -18,21 +19,28 @@ export function BoardScreen({
   const id = weekId || boot.current_week_id;
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
+  const ticket = useRef(0);
+
+  const loadBoard = useCallback(async () => {
+    if (!id) return;
+    const mine = ++ticket.current;
+    try {
+      const next = await weekBoard(tokens.player, tokens.admin, id);
+      if (mine === ticket.current) {
+        setBoard(next);
+        setError("");
+      }
+    } catch (reason) {
+      if (mine === ticket.current) setError(reason instanceof Error ? reason.message : "Could not load picks");
+    }
+  }, [id, tokens.player, tokens.admin]);
 
   useEffect(() => {
-    if (!id) return;
-    let cancel = false;
-    weekBoard(tokens.player, tokens.admin, id)
-      .then((next) => {
-        if (!cancel) setBoard(next);
-      })
-      .catch((reason) => {
-        if (!cancel) setError(reason instanceof Error ? reason.message : "Could not load picks");
-      });
-    return () => {
-      cancel = true;
-    };
-  }, [id, tokens.player, tokens.admin]);
+    loadBoard().catch(() => undefined);
+  }, [loadBoard]);
+
+  const current = boot.weeks.find((week) => week.id === boot.current_week_id);
+  useLiveRefresh(loadBoard, !!current && !current.complete && id === current.id);
 
   const weeks = boot.weeks.filter((week) => week.released);
   const winners = board?.rows.filter((row) => row.winner) ?? [];

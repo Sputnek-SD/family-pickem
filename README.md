@@ -28,21 +28,22 @@ There are no passwords. Each person gets a private link. Opening it remembers th
 You do not need the database password or the project secret key. Apply the SQL with the management connection, then deploy the function. Do not run `supabase/seed.sql` on the hosted project. It only turns on a test clock for local development.
 
 1. Enable the **pg_cron** and **pg_net** extensions.
-2. Apply the migrations in filename order. If the first three are already on the project, apply only `supabase/migrations/20261121010617_live_qa_fixes.sql` after them:
+2. Apply the migrations in filename order. If the earlier ones are already on the project, apply only the files that are not:
    - `supabase/migrations/20261121002630_schema.sql` — tables, the 32 teams, the roster
    - `supabase/migrations/20261121002631_functions.sql` — scoring, the lock, and the functions the website calls
    - `supabase/migrations/20261121002632_schedule.sql` — the score-sync jobs
    - `supabase/migrations/20261121010617_live_qa_fixes.sql` — admin hand-back, pregame scores, Monday-night sync
+   - `supabase/migrations/20261121015647_faster_game_day_sync.sql` — 90-second claim throttle and the 2-minute game-day jobs
 
    The jobs call `https://yqbepfcgyzrvsicvxukb.supabase.co/functions/v1/sync-nfl` with the public publishable key. There is no Vault secret.
-3. Deploy the score function: `supabase functions deploy sync-nfl`. Do not set any function secrets. Supabase injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; the function writes with those. The publishable key is not a JWT, so the platform JWT check is off and the function checks the key itself. A second call within two minutes does not hit ESPN.
+3. Deploy the score function: `supabase functions deploy sync-nfl`. Do not set any function secrets. Supabase injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; the function writes with those. The publishable key is not a JWT, so the platform JWT check is off and the function checks the key itself. A second call within 90 seconds, counting claimed rows only, does not hit ESPN.
 4. Confirm the jobs:
 
    ```sql
    select jobname, schedule from cron.job;
    ```
 
-   You should see `sync-nfl-game-window` (every 10 minutes Thursday through Monday, UTC), `sync-nfl-monday-night` (every 10 minutes, Tuesday 00:00–07:59 UTC, which is Monday night Pacific), and `sync-nfl-offdays` (every 6 hours on Tuesday and Wednesday, UTC). If the list is empty, the extensions were not on yet: enable them and run the schedule migration again. If ESPN is down, the last good scores stay and the next run tries again. A result from the sheet or from Brad is not overwritten.
+   You should see `sync-nfl-game-window` `*/10 * * * 0,1,4,5,6`, `sync-nfl-offdays` `20 */6 * * 2,3`, `sync-nfl-fast-evenings` `*/2 0-6 * * 0,1,2,5,6`, `sync-nfl-fast-sunday` `*/2 13-23 * * 0`, and `sync-nfl-fast-daytime` `*/2 16-23 * * 4,5,6`. There is no `sync-nfl-monday-night` job. If the list is empty, the extensions were not on yet: enable them and run the schedule migration again. If ESPN is down, the last good scores stay and the next run tries again. A result from the sheet or from Brad is not overwritten.
 5. Build the 2026 import and run that file in the SQL tool:
 
    ```bash
