@@ -348,7 +348,8 @@ main {
 .gridrow > div {
   padding: 3px 4px;
   border-bottom: 2px solid #08110e;
-  border-right: 2px solid #08110e;
+  border-right: 0;
+  box-shadow: inset -2px 0 0 #08110e;
 }
 .sticky {
   position: sticky;
@@ -396,7 +397,7 @@ main {
   background: #4a4a4a;
   color: #f4f1e8;
   font-size: 13px;
-  box-shadow: inset 3px 0 0 var(--pick, transparent);
+  box-shadow: inset 3px 0 0 var(--pick, transparent), inset -2px 0 0 #08110e;
 }
 .cell .helmet { --helmet-w: 20px; margin-inline: 0; }
 .cell.good { background: #157a42; color: #f4fff8; }
@@ -405,7 +406,7 @@ main {
 .cell.guess {
   background: transparent;
   color: var(--text);
-  box-shadow: none;
+  box-shadow: inset -2px 0 0 #08110e;
   font-size: 16px;
 }
 .tied-pill {
@@ -534,9 +535,10 @@ main {
   .gridwrap { overflow-x: auto; }
   .gridrow {
     --name: 176px;
+    --mnf: 64px;
     width: 100%;
     min-width: 100%;
-    grid-template-columns: var(--name) repeat(var(--games), minmax(0, 1fr)) max-content;
+    grid-template-columns: var(--name) repeat(var(--games), minmax(0, 1fr)) var(--mnf);
   }
   .gridrow > div { padding: 4px 3px; }
   .sticky { padding-left: 10px; }
