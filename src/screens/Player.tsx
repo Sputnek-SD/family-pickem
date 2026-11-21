@@ -32,32 +32,50 @@ export function PlayerScreen({
   if (error) return <p className="save error">{error}</p>;
   if (!page) return <p className="lede">Loading…</p>;
 
-  const scored = page.weeks.filter((week) => week.score != null);
+  const finished = page.weeks.filter((week) => {
+    const meta = boot.weeks.find((item) => item.id === week.week_id);
+    return meta ? meta.complete : week.score != null;
+  });
+  const scored = finished.filter((week) => week.entered);
   const best = scored.reduce<(typeof scored)[number] | null>(
     (top, week) => (top == null || (week.score ?? 0) > (top.score ?? 0) ? week : top),
     null,
   );
-  const max = Math.max(1, ...scored.map((week) => week.score ?? 0));
-  const points = scored.map((week, index) => {
-    const x = scored.length === 1 ? 50 : (index / (scored.length - 1)) * 100;
-    const y = 100 - ((week.score ?? 0) / max) * 80 - 8;
-    return `${x},${y}`;
+  const max = Math.max(1, ...finished.map((week) => (week.entered ? week.score ?? 0 : 0)));
+  const plot = finished.map((week, index) => {
+    const x = finished.length === 1 ? 180 : 48 + (index / (finished.length - 1)) * 250;
+    const value = week.entered ? week.score ?? 0 : 0;
+    const y = 146 - (value / max) * 112;
+    return { x, y, label: String(week.week_number), value };
   });
 
   return (
     <div className="screen" data-testid="player-page">
       <header className="hero compact">
-        <p className="kicker">{boot.season?.year}</p>
-        <h1>{page.player.full_name}</h1>
+        <p className="kicker">{page.player.full_name} · {boot.season?.year}</p>
+        <h1>{page.player.first_name}</h1>
         <p className="lede">
           {page.total} correct · {page.wins} weekly {page.wins === 1 ? "win" : "wins"}
           {best ? ` · best week ${best.label} (${best.score})` : ""}
         </p>
       </header>
-      {points.length > 1 && (
-        <svg className="chart" viewBox="0 0 100 100" role="img" aria-label="Score trend">
-          <polyline fill="none" stroke="currentColor" strokeWidth="2.5" points={points.join(" ")} />
+      {plot.length > 1 && (
+        <svg className="chart" viewBox="0 0 320 180" role="img" aria-label="Score trend for finished weeks">
+          <line x1="40" y1="24" x2="40" y2="146" />
+          <line x1="40" y1="146" x2="308" y2="146" />
+          <text x="6" y="28">{max}</text>
+          <text x="6" y="150">0</text>
+          <polyline fill="none" stroke="currentColor" strokeWidth="3" points={plot.map((point) => `${point.x},${point.y}`).join(" ")} />
+          {plot.map((point) => (
+            <g key={point.label}>
+              <circle cx={point.x} cy={point.y} r="3.5" />
+              <text x={point.x} y="168" textAnchor="middle">{point.label}</text>
+            </g>
+          ))}
         </svg>
+      )}
+      {page.weeks.some((week) => boot.weeks.find((item) => item.id === week.week_id && !item.complete)) && (
+        <p className="fine">The chart skips the week still in progress.</p>
       )}
       <ol className="weeks">
         {page.weeks.map((week) => (
@@ -66,7 +84,15 @@ export function PlayerScreen({
               {week.label}
               {week.winner && <Crown size={14} />}
             </span>
-            <b>{!week.entered ? "—" : week.score == null ? "…" : week.score}</b>
+            <b>
+              {!week.entered
+                ? "—"
+                : boot.weeks.find((item) => item.id === week.week_id && !item.complete)
+                  ? `${week.score ?? 0} so far`
+                  : week.score == null
+                    ? "…"
+                    : week.score}
+            </b>
           </li>
         ))}
       </ol>

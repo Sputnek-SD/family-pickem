@@ -17,5 +17,21 @@ describe("ESPN scoreboard", () => {
     });
     expect(board?.events[1].state).toBe("postponed");
     expect(normalizeScoreboard({})).toBeNull();
+    const pregame = normalizeScoreboard({
+      season: { type: 2, year: 2026 },
+      week: { number: 12 },
+      events: [{
+        id: "pre",
+        date: "2026-11-30T01:15:00Z",
+        competitions: [{
+          status: { type: { name: "STATUS_SCHEDULED", state: "pre", completed: false } },
+          competitors: [
+            { homeAway: "away", score: "0", team: { abbreviation: "WAS" } },
+            { homeAway: "home", score: "0", team: { abbreviation: "BAL" } },
+          ],
+        }],
+      }],
+    });
+    expect(pregame?.events[0]).toMatchObject({ state: "scheduled", away_score: null, home_score: null });
   });
 });

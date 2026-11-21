@@ -121,12 +121,15 @@ export function App() {
 
   const themeName = boot ? THEMES[themeForDate(new Date(boot.now), boot.phase ?? "regular")].kicker : "GAMEDAY";
 
+  const signedIn = !!boot?.authenticated;
+  const latestFinished = [...(boot?.weeks ?? [])].reverse().find((week) => week.complete);
+
   return (
-    <div className="app">
+    <div className={signedIn ? "app" : "app solo"}>
       <div className="theme-mark" data-testid="theme-name" data-theme-name="">
         {themeName}
       </div>
-      <nav className="nav">
+      {signedIn && <nav className="nav">
         <button type="button" data-testid="nav-week" aria-current={route.name === "week"} onClick={() => go("#/")}>
           Week
         </button>
@@ -139,7 +142,7 @@ export function App() {
         <button type="button" data-testid="nav-more" aria-current={route.name === "more"} onClick={() => go("#/more")}>
           More
         </button>
-      </nav>
+      </nav>}
       <main>
         {error && <p className="save error">{error}</p>}
         {!boot && !error && <p className="lede">Loading the week…</p>}
@@ -155,7 +158,12 @@ export function App() {
           <BoardScreen
             boot={boot}
             tokens={tokens}
-            weekId={boot.weeks.find((week) => String(week.week_number) === route.week)?.id}
+            weekId={
+              route.week
+                ? boot.weeks.find((week) => String(week.week_number) === route.week && week.complete)?.id
+                  ?? boot.weeks.find((week) => String(week.week_number) === route.week)?.id
+                : latestFinished?.id
+            }
             onWeek={(id) => {
               const week = boot.weeks.find((item) => item.id === id);
               go(`#/history/${week?.week_number ?? ""}`);
@@ -199,7 +207,13 @@ function More({ boot, onForget }: { boot: Boot; onForget: () => void }) {
         <h1>More</h1>
       </header>
       <div className="menu">
-        <button type="button" onClick={() => go("#/history/9")} data-testid="nav-history">History</button>
+        <button
+          type="button"
+          onClick={() => go(`#/history/${[...(boot.weeks ?? [])].reverse().find((week) => week.complete)?.week_number ?? ""}`)}
+          data-testid="nav-history"
+        >
+          History
+        </button>
         <button type="button" onClick={() => go("#/seasons")} data-testid="nav-seasons">Seasons</button>
         {boot.me && (
           <button type="button" onClick={() => go(`#/player/${boot.me?.player_id}`)} data-testid="nav-me">

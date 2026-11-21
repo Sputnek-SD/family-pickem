@@ -16,7 +16,12 @@ export function StandingsScreen({ boot, onOpen }: { boot: Boot; onOpen: (id: str
       <ol className="standings" data-testid="standings">
         {ranked.map((row) => (
           <li key={row.player_id}>
-            <button type="button" onClick={() => onOpen(row.player_id)} data-testid={`standing-${row.full_name}`}>
+            <button
+              type="button"
+              className={row.player_id === boot.me?.player_id ? "me" : undefined}
+              onClick={() => onOpen(row.player_id)}
+              data-testid={`standing-${row.full_name}`}
+            >
               <span className="place">
                 {row.place}
                 {row.tied && <em>TIED</em>}

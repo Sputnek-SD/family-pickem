@@ -70,14 +70,15 @@ export function normalizeScoreboard(payload: unknown): NormalizedBoard | null {
     const awayAbbr = String(awayTeam.abbreviation ?? "");
     const homeAbbr = String(homeTeam.abbreviation ?? "");
     if (!awayAbbr || !homeAbbr) continue;
+    const state = eventState(asRecord(competition.status) ?? asRecord(event.status));
     normalized.push({
       espn_id: String(event.id ?? ""),
       kickoff: typeof event.date === "string" ? event.date : null,
-      state: eventState(asRecord(competition.status) ?? asRecord(event.status)),
+      state,
       away_abbr: awayAbbr,
       home_abbr: homeAbbr,
-      away_score: numberOrNull(away?.score),
-      home_score: numberOrNull(home?.score),
+      away_score: state === "scheduled" ? null : numberOrNull(away?.score),
+      home_score: state === "scheduled" ? null : numberOrNull(home?.score),
       away_color: typeof awayTeam.color === "string" ? awayTeam.color : null,
       home_color: typeof homeTeam.color === "string" ? homeTeam.color : null,
       away_logo: typeof awayTeam.logo === "string" ? awayTeam.logo : null,

@@ -29,6 +29,7 @@ export type Game = {
   home_score: number | null;
   winner_team_id: string | null;
   locked: boolean;
+  result_source?: string | null;
   away: Team;
   home: Team;
 };

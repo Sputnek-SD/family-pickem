@@ -216,9 +216,27 @@ export function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** Team colors can be nearly black. Use a light edge so the card still reads. */
+function clampByte(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+/**
+ * Keep the team's own hue. Very dark colors are lifted in that hue so the
+ * card edge stays visible, instead of being replaced with grey.
+ */
 export function readableTeamColor(hex: string): string {
   const normalized = hex.startsWith("#") ? hex : `#${hex}`;
   if (!/^#[0-9a-fA-F]{6}$/.test(normalized)) return "#d6ff4a";
-  return luminance(normalized) < 0.04 ? "#d5dbe3" : normalized;
+  if (luminance(normalized) >= 0.06) return normalized;
+  const value = parseInt(normalized.slice(1), 16);
+  let red = (value >> 16) & 255;
+  let green = (value >> 8) & 255;
+  let blue = value & 255;
+  if (red + green + blue === 0) return "#A5ACAF";
+  const peak = Math.max(red, green, blue);
+  const scale = 150 / peak;
+  red = clampByte(red * scale);
+  green = clampByte(green * scale);
+  blue = clampByte(blue * scale);
+  return `#${red.toString(16).padStart(2, "0")}${green.toString(16).padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
 }
