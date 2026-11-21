@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { bootstrap, clearToken, readTokens, writeToken } from "./lib/api";
 import { useLiveRefresh } from "./lib/liveRefresh";
 import { THEMES, themeForDate } from "./lib/theme";
@@ -40,23 +40,42 @@ function go(path: string) {
   if (location.hash !== path) location.hash = path;
 }
 
+/** A player or admin link still in the hash, before it is stored. */
+function linkFromHash(hash: string): { player?: string; admin?: string } {
+  const route = parseRoute(hash);
+  if (route.name === "enter-player") return { player: route.token };
+  if (route.name === "enter-admin") return { admin: route.token };
+  return {};
+}
+
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(location.hash));
   const [tokens, setTokens] = useState(readTokens);
   const [boot, setBoot] = useState<Boot | null>(null);
   const [error, setError] = useState("");
+  const requestId = useRef(0);
 
-  const load = useCallback(async (next = tokens) => {
-    const data = await bootstrap(next.player, next.admin);
-    if (next.admin && data.authenticated && !data.is_admin) {
-      clearToken("admin");
-      next = { ...next, admin: "" };
-      setTokens(next);
+  const load = useCallback(async () => {
+    const link = linkFromHash(location.hash);
+    const next = readTokens();
+    // The link is not stored yet. A tokenless bootstrap here would race the real one.
+    if (link.player && next.player !== link.player) return;
+    if (link.admin && next.admin !== link.admin) return;
+    const mine = ++requestId.current;
+    try {
+      const data = await bootstrap(next.player, next.admin);
+      if (mine !== requestId.current) return;
+      if (next.admin && data.authenticated && !data.is_admin) {
+        clearToken("admin");
+        setTokens({ ...next, admin: "" });
+      }
+      setBoot(data);
+      setError("");
+    } catch (reason) {
+      if (mine !== requestId.current) return;
+      setError(reason instanceof Error ? reason.message : "Could not reach the pool");
     }
-    setBoot(data);
-    setError("");
-    return data;
-  }, [tokens]);
+  }, []);
 
   useEffect(() => {
     const onHash = () => setRoute(parseRoute(location.hash));
@@ -81,8 +100,8 @@ export function App() {
   }, [route]);
 
   useEffect(() => {
-    load().catch((reason) => setError(reason instanceof Error ? reason.message : "Could not reach the pool"));
-  }, [load]);
+    load();
+  }, [load, tokens.player, tokens.admin]);
 
   useEffect(() => {
     if (!boot?.now) return;
@@ -113,7 +132,7 @@ export function App() {
   const currentWeek = boot?.current_week_id
     ? boot.weeks?.find((item) => item.id === boot.current_week_id)
     : undefined;
-  useLiveRefresh(() => load().then(() => undefined), !!currentWeek && !currentWeek.complete);
+  useLiveRefresh(load, !!currentWeek && !currentWeek.complete);
 
   const themeName = boot ? THEMES[themeForDate(new Date(boot.now), boot.phase ?? "regular")].kicker : "GAMEDAY";
 

@@ -8,18 +8,21 @@ const routes = ["/", "/#/p/bogus", "/#/not-a-real-page"];
 const server = spawn(
   "npx",
   ["vite", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
-  { stdio: "inherit" },
+  { stdio: "inherit", detached: true },
 );
+let previewExited = false;
+server.on("exit", () => { previewExited = true; });
 
 function stop() {
-  if (!server.killed) server.kill("SIGTERM");
+  if (!server.pid) return;
+  try { process.kill(-server.pid, "SIGTERM"); } catch { server.kill("SIGTERM"); }
 }
 
 async function ready() {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     try {
       const response = await fetch(`${origin}/`);
-      if (response.ok) return;
+      if (response.ok && !previewExited) return;
     } catch {
       // preview is still starting
     }
