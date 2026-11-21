@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { displayName, type Named } from "./lib/names";
 import { rankBy } from "./lib/rank";
+import { helmetUrl } from "./lib/teams";
 import { readableTeamColor } from "./lib/theme";
 import type { Board, Game, Person } from "./lib/types";
 
@@ -33,10 +34,18 @@ export function Confetti({ show }: { show: boolean }) {
   );
 }
 
-export function Logo({ src, size = 28 }: { src: string; size?: number }) {
+export function Helmet({ id, width = 40, lazy = false }: { id: string; width?: number; lazy?: boolean }) {
+  const height = Math.round(width / 0.9);
   return (
-    <span className="logo-badge">
-      <img src={src} alt="" width={size} height={size} />
+    <span className="helmet" style={{ "--helmet-w": `${width}px` } as CSSProperties}>
+      <img
+        src={helmetUrl(id)}
+        alt=""
+        width={width}
+        height={height}
+        loading={lazy ? "lazy" : "eager"}
+        decoding="async"
+      />
     </span>
   );
 }
@@ -45,7 +54,7 @@ export function TeamFace({ team, selected }: { team: Game["away"]; selected?: bo
   const color = readableTeamColor(team.color);
   return (
     <span className={selected ? "face on" : "face"} style={{ "--team": color } as CSSProperties}>
-      <Logo src={team.logo} size={32} />
+      <Helmet id={team.id} width={36} />
     </span>
   );
 }
@@ -88,7 +97,7 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
           <div className="sticky">Player</div>
           {games.map((game) => (
             <div key={game.id} className="gh" title={`${game.away.name} at ${game.home.name}`}>
-              <Logo src={game.away.logo} size={22} />
+              <Helmet id={game.away.id} width={28} lazy />
               <b>{game.away.id}</b>
               <span>@ {game.home.id}</span>
               {game.status === "final" && game.is_tie && <em className="tied-pill">TIE</em>}
@@ -122,7 +131,7 @@ export function PickGrid({ board, meId }: { board: Board; meId?: string }) {
                 const color = team ? readableTeamColor(team.color) : "transparent";
                 return (
                   <div key={game.id} className={`cell ${mark}`} style={{ "--pick": color } as CSSProperties}>
-                    {team ? <Logo src={team.logo} size={16} /> : null}
+                    {team ? <Helmet id={team.id} width={22} lazy /> : null}
                     <span>{team ? team.id : "–"}</span>
                   </div>
                 );

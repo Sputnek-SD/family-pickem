@@ -75,8 +75,15 @@ export function teamById(id: string): Team | undefined {
   return TEAMS.find((team) => team.id === id);
 }
 
+/** Brad's helmet cutout, resolved against the GitHub Pages base path. */
+export function helmetUrl(id: string): string {
+  const base = import.meta.env.BASE_URL || "./";
+  const prefix = base.endsWith("/") ? base : `${base}/`;
+  return `${prefix}helmets/${id.toLowerCase()}.png`;
+}
+
 export function logoUrl(id: string): string {
-  return `https://a.espncdn.com/i/teamlogos/nfl/500/${id.toLowerCase()}.png`;
+  return helmetUrl(id);
 }
 
 /** Map a sheet name (short or full) to a team id. "TIE" and blanks are not teams. */
