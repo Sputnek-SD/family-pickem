@@ -3,10 +3,10 @@ import { savePicks } from "../lib/api";
 import { displayName } from "../lib/names";
 import { rankBy } from "../lib/rank";
 import { showScore } from "../lib/scores";
-import { readableTeamColor } from "../lib/theme";
+import { luminance, readableTeamColor } from "../lib/theme";
 import { formatCountdown, formatKickoff } from "../lib/time";
 import type { Boot, Game } from "../lib/types";
-import { Confetti, Crown, Missing } from "../widgets";
+import { Confetti, Crown, Logo, Missing } from "../widgets";
 
 export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
   const week = boot.weeks.find((item) => item.id === boot.current_week_id) ?? null;
@@ -69,7 +69,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
 
   return (
     <div className="screen">
-      <header className="hero week">
+      <header className="hero week poster">
         <p className="kicker" data-testid="theme-kicker">
           {boot.season?.year} · {boot.season?.lock_mode === "kickoff" ? "Locks at kickoff" : "Thursday lock"}
         </p>
@@ -105,7 +105,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
       </header>
 
       {winners.length > 0 && (
-        <div className="winner-banner" data-testid="week-winner">
+        <div className="winner-banner poster" data-testid="week-winner">
           <Confetti show />
           <Crown />
           <div>
@@ -122,7 +122,9 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
         </section>
       )}
 
-      {boot.leaderboard && boot.leaderboard.length > 0 && poolLocked && <WeekBoard rows={boot.leaderboard} />}
+      {boot.leaderboard && boot.leaderboard.length > 0 && poolLocked && (
+        <WeekBoard rows={boot.leaderboard} meId={boot.me?.player_id} />
+      )}
 
       <div className="games">
         {games.map((game) => {
@@ -149,27 +151,36 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
               <div className="match">
                 {[game.away, game.home].map((team) => {
                   const selected = mine === team.id;
-                  const won = decided && !game.is_tie && game.winner_team_id === team.id;
-                  const lost = decided && selected && !won;
+                  const winner = decided && !game.is_tie && game.winner_team_id === team.id;
+                  let result = "";
+                  if (selected && decided && game.is_tie) result = " tie";
+                  else if (selected && decided && winner) result = " right";
+                  else if (selected && decided) result = " wrong";
+                  else if (!selected && winner) result = " winner";
                   const raw = team.id === game.away.id ? game.away_score : game.home_score;
                   const score = showScore(game.status) ? raw : null;
                   return (
                     <button
                       key={team.id}
                       type="button"
-                      className={`team${selected ? " selected" : ""}${won ? " good" : ""}${lost ? " bad" : ""}`}
-                      style={{ "--team": readableTeamColor(team.color) } as CSSProperties}
+                      className={`team${selected ? " selected" : ""}${result}`}
+                      style={{ "--team": readableTeamColor(team.color), "--ink": luminance(readableTeamColor(team.color)) > 0.45 ? "#16120a" : "#fffaf0" } as CSSProperties}
                       aria-pressed={selected}
                       disabled={game.locked || !boot.me}
                       data-testid={`pick-${game.slot}-${team.id}`}
                       onClick={() => choose(game, team.id)}
                     >
-                      <img src={team.logo} alt="" width={40} height={40} />
-                      <span>
+                      <Logo src={team.logo} size={36} />
+                      <span className="team-name">
                         <small>{team.location}</small>
                         <strong>{team.short_name}</strong>
                       </span>
+                      {!selected && winner && <span className="winner-mark">W</span>}
                       {score != null && <b className="score">{score}</b>}
+                      {selected && !decided && <em className="pick-badge">Your pick ✓</em>}
+                      {selected && decided && game.is_tie && <em className="pick-badge tie">Tie</em>}
+                      {selected && decided && !game.is_tie && winner && <em className="pick-badge right">✓ Right</em>}
+                      {selected && decided && !game.is_tie && !winner && <em className="pick-badge wrong">✗ Wrong</em>}
                     </button>
                   );
                 })}
@@ -209,20 +220,56 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
   );
 }
 
-function WeekBoard({ rows }: { rows: NonNullable<Boot["leaderboard"]> }) {
+function WeekBoard({ rows, meId }: { rows: NonNullable<Boot["leaderboard"]>; meId?: string }) {
+  const [open, setOpen] = useState(false);
   const ranked = rankBy(rows, (row) => row.correct, (row) => row.full_name);
+  const top = ranked.slice(0, 3);
+  const me = ranked.find((row) => row.player_id === meId);
+  if (!open) {
+    return (
+      <div className="strip" data-testid="live-board">
+        <div className="strip-top">
+          {top.map((row) => (
+            <span className="strip-person" key={row.player_id}>
+              <b>{row.place}</b>
+              {row.tied && <em className="tied-pill">TIED</em>}
+              {displayName(row, ranked)}
+              <strong>{row.correct}</strong>
+            </span>
+          ))}
+        </div>
+        <div className="strip-you">
+          {me && (
+            <strong className="strip-you-line">
+              <span>You: {me.place}</span>
+              {me.tied && <em className="tied-pill">TIED</em>}
+            </strong>
+          )}
+          <button type="button" onClick={() => setOpen(true)}>
+            See all
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
-    <ol className="liveboard" data-testid="live-board">
-      {ranked.map((row) => (
-        <li key={row.player_id}>
-          <span className="place">{row.place}{row.tied && <em>TIED</em>}</span>
-          <span>
-            {row.winner && <Crown size={14} />}
-            {displayName(row, ranked)}
-          </span>
-          <b>{row.correct}</b>
-        </li>
-      ))}
-    </ol>
+    <div className="strip open" data-testid="live-board">
+      <ol>
+        {ranked.map((row) => (
+          <li key={row.player_id} className={row.player_id === meId ? "me" : undefined}>
+            <span>
+              {row.place}
+              {row.tied && <em className="tied-pill">TIED</em>}
+              {row.winner && <Crown size={14} />}
+              {displayName(row, ranked)}
+            </span>
+            <b>{row.correct}</b>
+          </li>
+        ))}
+      </ol>
+      <button type="button" onClick={() => setOpen(false)}>
+        Show less
+      </button>
+    </div>
   );
 }
