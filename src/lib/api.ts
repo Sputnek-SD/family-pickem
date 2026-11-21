@@ -14,12 +14,26 @@ export const supabase = createClient(url, key, {
   },
 });
 
+function abortAfter(ms: number): { signal: AbortSignal; cancel: () => void } {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return { signal: AbortSignal.timeout(ms), cancel() { /* the browser owns this timer */ } };
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return { signal: ctrl.signal, cancel: () => clearTimeout(timer) };
+}
+
 async function call<T>(fn: string, args: Record<string, unknown>, timeoutMs?: number): Promise<T> {
-  let query = supabase.rpc(fn, args);
-  if (timeoutMs) query = query.abortSignal(AbortSignal.timeout(timeoutMs));
-  const { data, error } = await query;
-  if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").split("\n")[0]);
-  return data as T;
+  const timeout = timeoutMs ? abortAfter(timeoutMs) : null;
+  try {
+    let query = supabase.rpc(fn, args);
+    if (timeout) query = query.abortSignal(timeout.signal);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").split("\n")[0]);
+    return data as T;
+  } finally {
+    timeout?.cancel();
+  }
 }
 
 export const PLAYER_KEY = "pickem.playerToken";

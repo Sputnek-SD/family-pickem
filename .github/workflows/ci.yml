@@ -37,3 +37,4 @@ jobs:
       - run: node tests/smoke/signin-race.mjs
       - run: node tests/smoke/raiders-cards.mjs
       - run: node tests/smoke/refresh-timeout.mjs
+      - run: node tests/smoke/legacy-abort.mjs

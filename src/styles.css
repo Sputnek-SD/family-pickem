@@ -24,6 +24,7 @@
 html, body, #root { min-height: 100%; }
 body {
   margin: 0;
+  background: var(--bg);
   background:
     radial-gradient(900px 420px at 0% -10%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 55%),
     var(--bg);
@@ -33,7 +34,7 @@ button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 img { display: block; }
 
-.app { min-height: 100dvh; }
+.app { min-height: 100vh; min-height: 100dvh; }
 main {
   width: min(1120px, 100%);
   margin: 0 auto;
@@ -79,12 +80,14 @@ main {
   margin: 10px 0 0;
   padding: 10px 12px;
   border-radius: 12px;
+  background: var(--card);
   background: color-mix(in srgb, var(--accent) 16%, var(--card));
 }
 .save { min-height: 1.2em; margin: 8px 0 0; color: var(--good); }
 .save.error { color: var(--bad); }
 .games { display: grid; gap: 12px; }
 .game, .panel, .welcome {
+  background: var(--card);
   background: color-mix(in srgb, var(--card) 92%, black);
   border: 1px solid var(--line);
   border-radius: 22px;
@@ -161,6 +164,10 @@ main {
   background: var(--team);
   color: var(--ink);
   border-color: transparent;
+  box-shadow:
+    0 0 0 4px var(--ring, #fffaf0),
+    0 0 0 7px #16120a,
+    0 0 18px 3px rgba(255, 250, 240, 0.75);
   box-shadow:
     0 0 0 4px var(--ring, #fffaf0),
     0 0 0 7px #16120a,
@@ -291,6 +298,7 @@ main {
 .liveboard .place em { display: inline; font-style: normal; margin-left: 4px; font-size: 10px; letter-spacing: 0.12em; }
 .liveboard b { margin-left: auto; font-family: var(--display); font-size: 22px; }
 .standings button.me, .gridrow.me .sticky {
+  background: var(--bg-elev);
   background: color-mix(in srgb, var(--accent) 22%, var(--bg-elev));
 }
 .gridrow.me .sticky {
@@ -455,6 +463,7 @@ main {
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: var(--bg);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
@@ -524,6 +533,7 @@ main {
   .nav {
     position: sticky;
     top: 0;
+    height: 100vh;
     height: 100dvh;
     display: flex;
     flex-direction: column;
