@@ -14,8 +14,10 @@ export const supabase = createClient(url, key, {
   },
 });
 
-async function call<T>(fn: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(fn, args);
+async function call<T>(fn: string, args: Record<string, unknown>, timeoutMs?: number): Promise<T> {
+  let query = supabase.rpc(fn, args);
+  if (timeoutMs) query = query.abortSignal(AbortSignal.timeout(timeoutMs));
+  const { data, error } = await query;
   if (error) throw new Error(error.message.replace(/^.*ERROR:\s*/, "").split("\n")[0]);
   return data as T;
 }
@@ -42,7 +44,7 @@ export function bootstrap(player: string, admin: string) {
   return call<Boot>("bootstrap", {
     p_player_token: player || null,
     p_admin_token: admin || null,
-  });
+  }, 15000);
 }
 
 export function savePicks(player: string, weekId: string, picks: Record<string, string>, guess: number | null) {
@@ -59,7 +61,7 @@ export function weekBoard(player: string, admin: string, weekId: string) {
     p_player_token: player || null,
     p_admin_token: admin || null,
     p_week_id: weekId,
-  });
+  }, 15000);
 }
 
 export function playerPage(player: string, admin: string, playerId: string, seasonId: string | null) {

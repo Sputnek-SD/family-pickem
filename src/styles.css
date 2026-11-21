@@ -162,12 +162,12 @@ main {
   color: var(--ink);
   border-color: transparent;
   box-shadow:
-    0 0 0 4px #fffaf0,
+    0 0 0 4px var(--ring, #fffaf0),
     0 0 0 7px #16120a,
-    0 0 18px 3px rgba(255, 250, 240, 0.9);
+    0 0 18px 3px color-mix(in srgb, var(--ring, #fffaf0) 75%, transparent);
 }
-.team.selected small,
-.team.selected strong,
+.team.selected .team-name small,
+.team.selected .team-name strong,
 .team.selected .score { color: var(--ink); }
 .team.selected .pick-badge { color: #16120a; }
 .team.selected.right {
