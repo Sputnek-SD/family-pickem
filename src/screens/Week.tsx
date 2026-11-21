@@ -6,7 +6,7 @@ import { showScore } from "../lib/scores";
 import { teamCardColors } from "../lib/theme";
 import { formatCountdown, formatKickoff } from "../lib/time";
 import type { Boot, Game } from "../lib/types";
-import { Confetti, Crown, Logo, Missing } from "../widgets";
+import { Confetti, Crown, Helmet, Missing } from "../widgets";
 
 export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
   const week = boot.weeks?.find((item) => item.id === boot.current_week_id) ?? null;
@@ -172,7 +172,7 @@ export function WeekScreen({ boot, token }: { boot: Boot; token: string }) {
                       onClick={() => choose(game, team.id)}
                     >
                       <span className="team-row">
-                        <Logo src={team.logo} size={36} />
+                        <Helmet id={team.id} width={44} />
                         <span className="team-name">
                           <small>{team.location}</small>
                           <strong>{team.short_name}</strong>

@@ -42,10 +42,10 @@ main {
   padding: 18px 16px calc(92px + env(safe-area-inset-bottom));
 }
 .theme-mark {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  padding: 8px 16px 0;
+  position: static;
+  z-index: 1;
+  padding: 8px 16px 10px;
+  background: var(--bg);
   font-size: 11px;
   letter-spacing: 0.18em;
   color: var(--accent);
@@ -204,19 +204,26 @@ main {
 .team.selected.tie .pick-badge { color: #1a1a1a; }
 .team.winner { box-shadow: none; }
 .team:disabled { cursor: default; }
-.logo-badge {
+.helmet {
+  --helmet-w: 40px;
   display: grid;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #f6f3ea;
-  box-shadow: 0 0 0 1px rgba(22, 18, 10, 0.35);
+  width: var(--helmet-w);
+  height: calc(var(--helmet-w) / 0.9);
+  margin-inline: auto;
+  background: rgba(246, 243, 234, 0.14);
+  border-radius: 8px;
 }
-.logo-badge img { width: 32px; height: 32px; object-fit: contain; background: transparent; }
-.team .logo-badge { width: 48px; height: 48px; }
-.team .logo-badge img { width: 36px; height: 36px; }
+.helmet img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+  background: transparent;
+}
+.team .helmet { --helmet-w: 44px; }
 .panel h2, .menu button, .primary, .secondary { font-size: 18px; }
 .panel h2 { margin: 0 0 8px; }
 .panel p { margin: 6px 0; color: var(--muted); }
@@ -341,25 +348,42 @@ main {
 .gridrow > div {
   padding: 3px 4px;
   border-bottom: 2px solid #08110e;
-  border-right: 2px solid #08110e;
+  border-right: 0;
+  box-shadow: inset -2px 0 0 #08110e;
 }
-.sticky { position: sticky; left: 0; z-index: 2; background: var(--bg-elev); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; line-height: 1.05; }
+.sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--name);
+  max-width: var(--name);
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--bg-elev);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  line-height: 1.05;
+}
 .gridrow.head .sticky { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
 .gh {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
   line-height: 1.05;
   text-align: center;
   font-size: 10px;
   color: var(--faint);
 }
-.gh .logo-badge { width: 20px; height: 20px; }
-.gh .logo-badge img { width: 15px; height: 15px; }
-.gh b, .gh span { display: block; white-space: nowrap; font-size: 11px; }
+.gh .helmet { --helmet-w: 26px; }
+.gh > b, .gh > span:not(.helmet) { display: block; width: 100%; white-space: nowrap; font-size: 11px; text-align: center; }
 .gh b, .cell { font-family: var(--display); letter-spacing: 0.02em; }
 .cell {
   display: flex;
@@ -367,21 +391,22 @@ main {
   align-items: center;
   justify-content: center;
   gap: 3px;
+  width: 100%;
+  min-width: 0;
   min-height: 52px;
   background: #4a4a4a;
   color: #f4f1e8;
   font-size: 13px;
-  box-shadow: inset 3px 0 0 var(--pick, transparent);
+  box-shadow: inset 3px 0 0 var(--pick, transparent), inset -2px 0 0 #08110e;
 }
-.cell .logo-badge { width: 18px; height: 18px; }
-.cell .logo-badge img { width: 13px; height: 13px; }
+.cell .helmet { --helmet-w: 20px; margin-inline: 0; }
 .cell.good { background: #157a42; color: #f4fff8; }
 .cell.bad { background: #b3262e; color: #fff6f6; }
 .cell.tie, .cell.pending { background: #4a4a4a; color: #f2f2f2; }
 .cell.guess {
   background: transparent;
   color: var(--text);
-  box-shadow: none;
+  box-shadow: inset -2px 0 0 #08110e;
   font-size: 16px;
 }
 .tied-pill {
@@ -510,9 +535,10 @@ main {
   .gridwrap { overflow-x: auto; }
   .gridrow {
     --name: 176px;
+    --mnf: 64px;
     width: 100%;
     min-width: 100%;
-    grid-template-columns: var(--name) repeat(var(--games), minmax(0, 1fr)) max-content;
+    grid-template-columns: var(--name) repeat(var(--games), minmax(0, 1fr)) var(--mnf);
   }
   .gridrow > div { padding: 4px 3px; }
   .sticky { padding-left: 10px; }
@@ -523,8 +549,8 @@ main {
   .gh.mnf, .cell.guess { padding-left: 10px; padding-right: 10px; }
   .gh { overflow: visible; }
   .gh b, .gh span { font-size: 13px; }
-  .gh .logo-badge { width: 34px; height: 34px; }
-  .gh .logo-badge img { width: 26px; height: 26px; }
+  .gh .helmet { --helmet-w: 32px; }
+  .cell .helmet { --helmet-w: 22px; }
   .cell.guess { font-size: 18px; }
   .cell { font-size: 14px; min-height: 52px; }
   .app { display: grid; grid-template-columns: 220px 1fr; }

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { displayName } from "../../src/lib/names.ts";
 import { ordinal, rankByTotal } from "../../src/lib/rank.ts";
@@ -219,6 +220,13 @@ describe("themes and clock", () => {
     expect(themeForDate(new Date("2026-12-25T20:00:00Z"), "playoffs")).toBe("christmas");
     const thanks = thanksgivingWindow(2026);
     expect(thanks).toEqual({ start: 20261123, end: 20261129 });
+  });
+
+  it("has a helmet cutout for every team", () => {
+    expect(TEAMS).toHaveLength(32);
+    for (const team of TEAMS) {
+      expect(existsSync(`public/helmets/${team.id.toLowerCase()}.png`), team.id).toBe(true);
+    }
   });
 
   it("keeps selected card text at least 4.5:1 for every team", () => {
