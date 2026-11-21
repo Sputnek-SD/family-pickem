@@ -172,7 +172,7 @@ try {
   const states = ["open", "right", "wrong", "tie"];
   const viewports = [
     { name: "phone", width: 390, height: 844 },
-    { name: "desktop", width: 1280, height: 800 },
+    { name: "desktop", width: 1440, height: 800 },
   ];
   for (const viewport of viewports) {
     for (const state of states) {

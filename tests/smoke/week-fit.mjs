@@ -130,7 +130,7 @@ let browser;
 try {
   await ready();
   browser = await chromium.launch({ headless: true });
-  const widths = [1024, 1200, 1440];
+  const widths = [1024, 1200, 1440, 3440];
   for (const width of widths) {
     const problems = [];
     const context = await browser.newContext({ viewport: { width, height: 900 } });
@@ -216,16 +216,22 @@ try {
         divider: before.content,
         scrollWidth: root.scrollWidth,
         clientWidth: root.clientWidth,
+        clipped: [...document.querySelectorAll(".team-name strong, .team-name small")]
+          .filter((node) => node.scrollWidth > node.clientWidth)
+          .map((node) => `${node.closest(".team")?.dataset.testid} "${node.textContent}" ${node.scrollWidth}>${node.clientWidth}`),
       };
     });
     problems.push(...fit.hits);
     if (fit.scrollWidth > fit.clientWidth + 1) {
       problems.push(`page scrolls horizontally ${fit.scrollWidth} > ${fit.clientWidth}`);
     }
-    if (width < 1200) {
+    if ([1200, 1440, 3440].includes(width) && fit.clipped.length) {
+      problems.push(...fit.clipped.map((item) => `ellipsized ${item}`));
+    }
+    if (width < 1440) {
       if (!fit.stacked) problems.push("games are not a single column");
       if (fit.gamesWidth > 681) problems.push(`single column is ${fit.gamesWidth.toFixed(0)}px wide`);
-      if (fit.divider !== "none") problems.push(`divider shows below 1200 (${fit.divider})`);
+      if (fit.divider !== "none") problems.push(`divider shows below 1440 (${fit.divider})`);
     } else if (!fit.sideBySide) {
       problems.push("games are not two columns");
     } else if (fit.divider === "none") {
@@ -266,4 +272,4 @@ if (failures.length) {
   console.error(failures.join("\n\n"));
   process.exit(1);
 }
-console.log("Names, scores, and W marks stay apart at 1024, 1200, and 1440.");
+console.log("Names stay whole at 1200, 1440, and 3440, and clear of the score and W.");
